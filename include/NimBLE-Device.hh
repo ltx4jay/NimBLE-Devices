@@ -11,6 +11,8 @@
 
 #include "NimBLEDevice.h"
 
+#include <functional>
+#include <stdint>
 #include <string>
 #include <vector>
 
@@ -24,7 +26,6 @@ namespace NimBLE {
 class InterestingDevice : public NimBLEClientCallbacks
 {
 public:
-
     //
     // Check if the advertised device matches any of the not-yet-found interesting devices.
     // Returns a pointer to the device if the advertised devices matches, or NULL otherwise.

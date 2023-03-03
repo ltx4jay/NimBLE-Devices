@@ -19,10 +19,6 @@
 #include "NimBLE-Device.hh"
 
 
-#include <functional>
-#include <stdint>
-
-
 namespace NimBLE {
 
 namespace COYOTE {
@@ -80,9 +76,9 @@ public:
     uint8_t getPower();
 
     //
-    // Register a function to be called whenever a power update is reported by the channel
+    // Subscribe to power change updates (optional)
     //
-    void subscribePower(std::function<void(uint8_t)> fct);
+    void subscribePower(std::function<void(uint8_t, void*)> fct, void* user);
 
     //
     // Play the specified waveform, at the specified power.
@@ -139,9 +135,9 @@ public:
     Channel& getChannelB;
 
     //
-    // Register a function to be called whenever a battery update is reported by the channel
+    // Subscribe to battery update. Argument is battery level in % (optional)
     //
-    void subscribeBattery(std::function<void(uint8_t)> fct);
+    void subscribeBattery(std::function<void(uint8_t, void*)> fct, void* user);
 
     //
     // Service the Coyote

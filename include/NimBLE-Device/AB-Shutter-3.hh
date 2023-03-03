@@ -17,10 +17,6 @@
 #include "NimBLE-Device.hh"
 
 
-#include <functional>
-#include <stdint>
-
-
 namespace NimBLE {
 
 namespace AB_Shutter3 {
@@ -36,8 +32,8 @@ public:
 
     virtual ~Device();
 
-    bool initDevice()   override;
-    bool serviceLoop()  override;
+    bool initDevice()               override;
+    bool serviceLoop(long nowInMs)  override;
 
 private:
     void notifyButton(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);

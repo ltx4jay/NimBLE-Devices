@@ -16,10 +16,6 @@
 #include "NimBLE-Device.hh"
 
 
-#include <functional>
-#include <stdint>
-
-
 namespace Nimble {
 
 namespace ShutterButton {
@@ -39,21 +35,18 @@ public:
     virtual ~Device();
 
     //
-    // Set the maximum button press/release time for a click and between-click time.
-    // Anything longer is considered a long press or two separate clicks.
+    // Set the maximum button press time for a click
+    // Anything longer is considered a long press and not a click.
     // Default is 0.5 secs
     //
     void setMaximumClickTime(unsigned int msecs);
 
     //
-    // Return true if the button was clicked since we last checked.
-    // Does not detect multiple clicks
+    // Returns the number of times the button was clicked since we last checked
     // Note: A click is a press + release event
     //
-    bool wasSingleClicked();
-    bool wasDoubleClicked();
-    bool wasTripleClicked();
-    bool wasLongClicked();
+    unsigned int getNumClicks();
+    unsigned int getNumClicks(bool &lastOneWasLongPress);
 
     //
     // Check if the button is currently pressed.
@@ -62,10 +55,16 @@ public:
     unsigned long isPressed();
 
     //
-    // Subscribe to the button event
+    // Subscribe to the button event (optional)
     // The argument is true if the button was pressed, false if the button was released
     //
-    void subscribeButton(std::function<void(bool)> fct);
+    void subscribeButton(std::function<void(bool, void*)> fct, void* user);
+
+protected:
+    //
+    // Report a button event
+    //
+    void buttonEvent(bool isPressed);
 };
 
 }

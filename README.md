@@ -1,4 +1,6 @@
-# NimBLE Devices
+# WIP: NimBLE Devices
+
+NOTE: This is still rough WIP and in early stage. Not useable yet but looking for feedback.
 
 Convenience APIs for managing and controlling popular BLE (Bluetooth Low Energy) devices via the NimBLE stack.
 

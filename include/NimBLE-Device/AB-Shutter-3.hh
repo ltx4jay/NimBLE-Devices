@@ -14,14 +14,14 @@
 #pragma once
 
 
-#include "NimBLE-Device.hh"
+#include "Keyboard.hh"
 
 
 namespace NimBLE {
 
 namespace AB_Shutter3 {
 
-class Device : public NimBLE::ShutterButton
+class Device : public NimBLE::Keyboard::Device
 {
 public:
     //
@@ -32,8 +32,8 @@ public:
 
     virtual ~Device();
 
-    bool initDevice()               override;
-    bool serviceLoop(long nowInMs)  override;
+    bool doInitDevice()             override;
+    void serviceLoop(long nowInMs)  override;
 
 private:
     void notifyButton(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);

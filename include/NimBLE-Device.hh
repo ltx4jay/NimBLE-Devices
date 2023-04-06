@@ -12,9 +12,27 @@
 #include "NimBLEDevice.h"
 
 #include <functional>
-#include <stdint>
+#include <cstdint>
 #include <string>
 #include <vector>
+
+
+class SemLockGuard
+{
+    SemaphoreHandle_t mMutex;
+    
+public:
+    SemLockGuard(SemaphoreHandle_t mutex)
+        : mMutex(mutex)
+        {
+            xSemaphoreTakeRecursive(mMutex, portMAX_DELAY);
+        }
+
+    ~SemLockGuard()
+        {
+            xSemaphoreGiveRecursive(mMutex);
+        }
+};
 
 
 namespace NimBLE {
@@ -26,6 +44,12 @@ namespace NimBLE {
 class InterestingDevice : public NimBLEClientCallbacks
 {
 public:
+    //
+    // Add a device of interest to the pool of interesting devices
+    // Returns true if the specified name is unique.
+    //
+    static bool addToDevicePool(InterestingDevice* dev, bool mustFind = false);
+
     //
     // Check if the advertised device matches any of the not-yet-found interesting devices.
     // Returns a pointer to the device if the advertised devices matches, or NULL otherwise.
@@ -51,12 +75,28 @@ public:
     static InterestingDevice* getByName(const char* name);
 
     //
+    // Returns true if all must-find devices were found
+    //
+    static bool allFound();
+
+    //
+    // Return unique name
+    //
+    const char* getName() const;
+
+    //
+    // Subscribe to device events
+    //
+    typedef enum {ERROR, FOUND, START_CONNECT, CONNECTED, START_INIT, INIT, DISCONNECTED} Events_t;
+    void subscribeEvents(std::function<void(uint8_t, void*)> fct, void* user = NULL);
+
+    //
     // Returns true if this device was found
     //
     bool wasFound();
 
     //
-    // Initialize all found devices, returning true if everything succeeded
+    // Initialize all not-yet-initialized found devices, returning true if everything succeeded
     //
     static bool initFoundDevices();
 
@@ -64,7 +104,12 @@ public:
     // Connect, probe, and initialize the device.
     // Returns true if successful.
     //
-    virtual bool initDevice() = 0;
+    bool initDevice();
+
+    //
+    // Returns true of the device is fully connected and ready to use
+    //
+    bool isConnected();
 
     //
     // Service all found devices unless they have explicitly opted out of this global service call.
@@ -104,15 +149,34 @@ protected:
     //
     InterestingDevice(const char* name, const char* bleName, const char* macAddr = NULL);
 
+    //
+    // Notify of an event
+    //
+    virtual void notifyEvent(uint8_t event);
+    
     bool connect(bool refresh = true);
 
+    
 private:
     static std::vector<InterestingDevice*> sAllDevices;
     
     std::string         mUniqueName;
     std::string         mDeviceName;
     const NimBLEAddress mAddress;
-    bool                isConnected;
+    bool                mMustFind;
+    bool                mFound;
+    bool                mConnected;
+    bool                mInit;
+    bool                mService;
+
+
+    struct {
+        std::function<void(uint8_t, void*)>   fct;
+        void                                 *user;
+    } mEventCb;
+
+    
+    virtual bool doInitDevice() = 0;
 
     //
     // These are default implementations for NimBLE callbacks
@@ -123,6 +187,7 @@ private:
     
     virtual void onDisconnect(NimBLEClient* pClient, int reason)  override
         {
+            notifyEvent(DISCONNECTED);
         }
 
     bool onConnParamsUpdateRequest(NimBLEClient* pClient, const ble_gap_upd_params* params)  override

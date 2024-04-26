@@ -169,7 +169,6 @@ private:
     bool                mInit;
     bool                mService;
 
-
     struct {
         std::function<void(uint8_t, void*)>   fct;
         void                                 *user;

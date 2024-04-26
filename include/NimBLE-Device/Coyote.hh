@@ -18,10 +18,15 @@
 
 #include "NimBLE-Device.hh"
 
+#include <freertos/FreeRTOS.h>
+
 
 namespace NimBLE {
 
 namespace COYOTE {
+
+class Device;
+
 
 //
 // One waveform segment
@@ -38,6 +43,12 @@ public:
     //
     WaveVal(const std::vector<uint8_t> vals, uint16_t rpt = 1);
 
+    //
+    // Total length, in ms, of this waveform segment
+    //
+    unsigned int duration() const;
+    
+
 private:
     uint32_t   x    :  5;
     uint32_t   y    : 10;
@@ -45,6 +56,11 @@ private:
     uint32_t   rsvd : 12;
 
     uint16_t   repeat;
+
+    operator uint8_t*() const;
+
+    friend class Channel;
+    friend class Device;
 };
 
 
@@ -61,9 +77,14 @@ class Channel
 {
 public:
     //
+    // Return the channel name
+    //
+    std::string getName();
+    
+    //
     // Set output power
     //
-    void setPower(uint8_t val);
+    void setPower(uint8_t val, bool unsafe = false);
 
     //
     // Increment/Decrement output power
@@ -98,7 +119,36 @@ public:
     
 
 private:
-    Channel();
+    Channel(Device* parent, const char* name);
+
+    Device*      mDevice;
+    std::string  mName;
+
+    NimBLERemoteCharacteristic* mChar;
+
+    uint16_t  mMaxPower;
+    uint16_t  mSetPower;
+    uint16_t  mPower;
+    bool      mSafeMode;
+
+    struct {
+        std::function<void(uint8_t, void*)> fct;
+        void*                               user;
+    } mPowerCb;
+
+    void updatePower(uint8_t power);
+
+    struct Playing {
+        SemaphoreHandle_t          mutex;
+        bool                       start;
+        bool                       run;
+        Waveform                   wave;
+        Waveform::const_iterator   iter;
+        unsigned int               nLeft;
+    } mPlaying;
+
+    void findNextSegment();
+    void sendNextSegment();
 
     friend class Device;
 };
@@ -118,11 +168,6 @@ public:
     virtual ~Device();
 
     //
-    // Connect and initialize the device
-    //
-    bool initDevice()  override;
-
-    //
     // Set the absolute maximum power levels that can be set on each channel.
     // Default is 100
     //
@@ -131,8 +176,8 @@ public:
     //
     // Get a reference to each channel interface
     //
-    Channel& getChannelA;
-    Channel& getChannelB;
+    Channel& getChannelA();
+    Channel& getChannelB();
 
     //
     // Subscribe to battery update. Argument is battery level in % (optional)
@@ -142,8 +187,33 @@ public:
     //
     // Service the Coyote
     //
-    bool serviceLoop(long nowInMs)  override;
+    void serviceLoop(long nowInMs)  override;
 
+
+private:
+    struct {
+        SemaphoreHandle_t             mutex;
+        uint16_t                      step;
+        uint16_t                      max;
+        NimBLERemoteCharacteristic   *charac;
+    } mPower;
+
+    Channel mChannel[2];
+
+    bool doInitDevice()  override;
+
+    void notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
+    struct {
+        std::function<void(uint8_t, void*)> fct;
+        void*                               user;
+    } mBatteryCb;
+    
+    void notifyPower(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
+
+    TaskHandle_t  mTaskHandle;
+    static void   runTask(void *pvParameter);
+
+    friend class Channel;
 };
 
 

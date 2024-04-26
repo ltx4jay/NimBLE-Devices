@@ -7,6 +7,8 @@ idf_component_register(
     esp-nimble-cpp
   SRCS
     "src/Nimble-Device.cc"
-    "src/Keyboard.cc"
     "src/AB-Shutter-3.cc"
+    "src/Coyote.cc"
+    "src/Switch.cc"
+    "src/Keyboard.cc"
 )

@@ -37,9 +37,9 @@ NimBLE::Keyboard::Device::isPressed(uint8_t key)
 
 
 void
-NimBLE::Keyboard::Device::subscribe(std::function<void(uint8_t key, Event_t e, void* user)> fct, void* user)
+NimBLE::Keyboard::Device::subscribe(std::function<void(uint8_t key, Event_t e)> fct)
 {
-    mListeners.push_back({fct, user});
+    mListeners.push_back({fct});
 }
 
 
@@ -47,5 +47,5 @@ void
 NimBLE::Keyboard::Device::publish(uint8_t key, Event_t e)
 {
     mPressed[key] = (e == PRESSED);
-    for (auto& it : mListeners) it.fct(key, e, it.user);
+    for (auto& it : mListeners) it.fct(key, e);
 }

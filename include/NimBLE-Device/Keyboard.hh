@@ -20,7 +20,7 @@ namespace NimBLE {
 namespace Keyboard {
 
 //
-// (Virtual) Base class for single-button devices
+// (Virtual) Base class for button devices
 //
 class Device : public NimBLE::InterestingDevice
 {
@@ -52,7 +52,7 @@ public:
     //
     // Subscribe to key/button events (optional)
     //
-    void subscribe(std::function<void(uint8_t key, Event_t e, void* user)> fct, void* user);
+    void subscribe(std::function<void(uint8_t key, Event_t e)> fct);
 
 protected:
     //
@@ -65,8 +65,7 @@ private:
     bool         mPressed[256];
 
     struct Listener {
-        std::function<void(uint8_t key, Event_t e, void* user)> fct;
-        void*                                                   user;
+        std::function<void(uint8_t key, Event_t e)> fct;
     };
     std::vector<Listener> mListeners;
 };

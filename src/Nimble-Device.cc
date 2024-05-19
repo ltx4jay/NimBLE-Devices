@@ -28,7 +28,7 @@ InterestingDevice::InterestingDevice(const char* name, const char* bleName, cons
     , mConnected(false)
     , mInit(false)
     , mService(true)
-    , mEventCb{NULL, NULL}
+    , mEventCb()
 {
 }
 
@@ -126,16 +126,16 @@ InterestingDevice::getName() const
 
 
 void
-InterestingDevice::subscribeEvents(std::function<void(uint8_t, void*)> fct, void* user)
+InterestingDevice::subscribeEvents(std::function<void(uint8_t)> fct)
 {
-    mEventCb = {fct, user};
+    mEventCb = fct;
 }
 
 
 void
 InterestingDevice::notifyEvent(uint8_t event)
 {
-    if (mEventCb.fct != NULL) mEventCb.fct(event, mEventCb.user);
+    if (mEventCb) mEventCb(event);
 }
 
 

@@ -88,7 +88,7 @@ public:
     // Subscribe to device events
     //
     typedef enum {ERROR, FOUND, START_CONNECT, CONNECTED, START_INIT, INIT, DISCONNECTED} Events_t;
-    void subscribeEvents(std::function<void(uint8_t, void*)> fct, void* user = NULL);
+    void subscribeEvents(std::function<void(uint8_t)> fct);
 
     //
     // Returns true if this device was found
@@ -169,10 +169,7 @@ private:
     bool                mInit;
     bool                mService;
 
-    struct {
-        std::function<void(uint8_t, void*)>   fct;
-        void                                 *user;
-    } mEventCb;
+    std::function<void(uint8_t)> mEventCb;
 
     
     virtual bool doInitDevice() = 0;

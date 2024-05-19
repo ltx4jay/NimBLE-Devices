@@ -99,7 +99,7 @@ public:
     //
     // Subscribe to power change updates (optional)
     //
-    void subscribePower(std::function<void(uint8_t, void*)> fct, void* user);
+    void subscribePower(std::function<void(uint8_t)> fct);
 
     //
     // Play the specified waveform, at the specified power.
@@ -131,10 +131,7 @@ private:
     uint16_t  mPower;
     bool      mSafeMode;
 
-    struct {
-        std::function<void(uint8_t, void*)> fct;
-        void*                               user;
-    } mPowerCb;
+    std::function<void(uint8_t)> mPowerCb;
 
     void updatePower(uint8_t power);
 
@@ -182,7 +179,7 @@ public:
     //
     // Subscribe to battery update. Argument is battery level in % (optional)
     //
-    void subscribeBattery(std::function<void(uint8_t, void*)> fct, void* user);
+    void subscribeBattery(std::function<void(uint8_t)> fctr);
 
     //
     // Service the Coyote
@@ -203,11 +200,8 @@ private:
     bool doInitDevice()  override;
 
     void notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
-    struct {
-        std::function<void(uint8_t, void*)> fct;
-        void*                               user;
-    } mBatteryCb;
-    
+    std::function<void(uint8_t)> mBatteryCb;
+
     void notifyPower(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
 
     TaskHandle_t  mTaskHandle;

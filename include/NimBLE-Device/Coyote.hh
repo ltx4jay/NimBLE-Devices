@@ -5,7 +5,7 @@
 // WARNING: USE AT YOUR OWN RISK
 //
 // 
-// Copyright (c) 2023 ltx4jay@yahoo.com
+// Copyright (c) 2023-2024 ltx4jay@yahoo.com
 //
 // Licensed under MIT License
 //
@@ -25,8 +25,10 @@ namespace NimBLE {
 
 namespace COYOTE {
 
+class Channel;
 class Device;
 
+inline namespace V2 {
 
 //
 // One waveform segment
@@ -59,15 +61,16 @@ private:
 
     operator uint8_t*() const;
 
-    friend class Channel;
-    friend class Device;
+    friend class COYOTE::Channel;
+    friend class COYOTE::Device;
 };
-
 
 //
 // A waveform is a sequence of waveform segments
 //
 typedef std::vector<WaveVal>  Waveform;
+
+};  // COYOTE::V2
 
 
 //
@@ -105,7 +108,7 @@ public:
     // Play the specified waveform, at the specified power.
     // If power is not specified, use current power
     //
-    void setWaveform(const Waveform& wave, uint8_t power = 0);
+    void setWaveform(const V2::Waveform& wave, uint8_t power = 0);
 
     //
     // Start playing the waveform (if any) for the specified number of secs (forever if 0)
@@ -136,12 +139,12 @@ private:
     void updatePower(uint8_t power);
 
     struct Playing {
-        SemaphoreHandle_t          mutex;
-        bool                       start;
-        bool                       run;
-        Waveform                   wave;
-        Waveform::const_iterator   iter;
-        unsigned int               nLeft;
+        SemaphoreHandle_t            mutex;
+        bool                         start;
+        bool                         run;
+        V2::Waveform                 wave;
+        V2::Waveform::const_iterator iter;
+        unsigned int                 nLeft;
     } mPlaying;
 
     void findNextSegment();
@@ -179,7 +182,7 @@ public:
     //
     // Subscribe to battery update. Argument is battery level in % (optional)
     //
-    void subscribeBattery(std::function<void(uint8_t)> fctr);
+    void subscribeBattery(std::function<void(uint8_t)> fct);
 
     //
     // Service the Coyote
@@ -216,23 +219,23 @@ private:
 //
 namespace DGLABS {
 
-const Waveform GrainTouch = {WaveVal(std::vector<uint8_t>({0xE1, 0x03, 0x00})),
-                             WaveVal(std::vector<uint8_t>({0xE1, 0x03, 0x0A})),
-                             WaveVal(std::vector<uint8_t>({0xA1, 0x04, 0x0A})),
-                             WaveVal(std::vector<uint8_t>({0xC1, 0x05, 0x0A})),
-                             WaveVal(std::vector<uint8_t>({0x01, 0x07, 0x00})),
-                             WaveVal(std::vector<uint8_t>({0x21, 0x01, 0x0A})),
-                             WaveVal(std::vector<uint8_t>({0x61, 0x01, 0x0A})),
-                             WaveVal(std::vector<uint8_t>({0xA1, 0x01, 0x0A})),
-                             WaveVal(std::vector<uint8_t>({0x01, 0x02, 0x00})),
-                             WaveVal(std::vector<uint8_t>({0x01, 0x02, 0x0A})),
-                             WaveVal(std::vector<uint8_t>({0x81, 0x02, 0x0A})),
-                             WaveVal(std::vector<uint8_t>({0x21, 0x03, 0x0A}))};
+const V2::Waveform GrainTouch = {V2::WaveVal(std::vector<uint8_t>({0xE1, 0x03, 0x00})),
+                                 V2::WaveVal(std::vector<uint8_t>({0xE1, 0x03, 0x0A})),
+                                 V2::WaveVal(std::vector<uint8_t>({0xA1, 0x04, 0x0A})),
+                                 V2::WaveVal(std::vector<uint8_t>({0xC1, 0x05, 0x0A})),
+                                 V2::WaveVal(std::vector<uint8_t>({0x01, 0x07, 0x00})),
+                                 V2::WaveVal(std::vector<uint8_t>({0x21, 0x01, 0x0A})),
+                                 V2::WaveVal(std::vector<uint8_t>({0x61, 0x01, 0x0A})),
+                                 V2::WaveVal(std::vector<uint8_t>({0xA1, 0x01, 0x0A})),
+                                 V2::WaveVal(std::vector<uint8_t>({0x01, 0x02, 0x00})),
+                                 V2::WaveVal(std::vector<uint8_t>({0x01, 0x02, 0x0A})),
+                                 V2::WaveVal(std::vector<uint8_t>({0x81, 0x02, 0x0A})),
+                                 V2::WaveVal(std::vector<uint8_t>({0x21, 0x03, 0x0A}))};
 
 //
 // High-frequency waform that is modulated when using audio source
 //
-const Waveform AudioBase = {WaveVal(1, 9, 16)};
+const V2::Waveform AudioBase = {V2::WaveVal(1, 9, 16)};
 
 }
 
@@ -243,40 +246,37 @@ const Waveform AudioBase = {WaveVal(1, 9, 16)};
 
 namespace LTX4JAY {
 
-const Waveform IntenseVibration = {WaveVal(1, 9, 22)};
+const V2::Waveform IntenseVibration = {V2::WaveVal(1, 9, 22)};
 
-const Waveform SlowWave = {WaveVal(1, 26, 8, 2),
-                           WaveVal(1, 24, 10),
-                           WaveVal(1, 22, 12),
-                           WaveVal(1, 20, 14),
-                           WaveVal(1, 18, 16),
-                           WaveVal(1, 16, 18),
-                           WaveVal(1, 16, 22),
-                           WaveVal(1, 16, 24),
-                           WaveVal(1, 12, 24, 2),
-                           WaveVal(1, 16, 24),
-                           WaveVal(1, 16, 22),
-                           WaveVal(1, 16, 18),
-                           WaveVal(1, 18, 16),
-                           WaveVal(1, 20, 14),
-                           WaveVal(1, 22, 12),
-                           WaveVal(1, 24, 10)};
+const V2::Waveform SlowWave = {V2::WaveVal(1, 26, 8, 2),
+                               V2::WaveVal(1, 24, 10),
+                               V2::WaveVal(1, 22, 12),
+                               V2::WaveVal(1, 20, 14),
+                               V2::WaveVal(1, 18, 16),
+                               V2::WaveVal(1, 16, 18),
+                               V2::WaveVal(1, 16, 22),
+                               V2::WaveVal(1, 16, 24),
+                               V2::WaveVal(1, 12, 24, 2),
+                               V2::WaveVal(1, 16, 24),
+                               V2::WaveVal(1, 16, 22),
+                               V2::WaveVal(1, 16, 18),
+                               V2::WaveVal(1, 18, 16),
+                               V2::WaveVal(1, 20, 14),
+                               V2::WaveVal(1, 22, 12),
+                               V2::WaveVal(1, 24, 10)};
 
-
-const Waveform MediumWave = {WaveVal(1, 9, 4, 2),
-                             WaveVal(1, 9, 6),
-                             WaveVal(1, 9, 10),
-                             WaveVal(1, 9, 12),
-                             WaveVal(1, 9, 17),
-                             WaveVal(1, 9, 20, 5),
-                             WaveVal(1, 9, 20),
-                             WaveVal(1, 9, 17),
-                             WaveVal(1, 9, 12),
-                             WaveVal(1, 9, 10),
-                             WaveVal(1, 9, 6)};
-
+const V2::Waveform MediumWave = {V2::WaveVal(1, 9, 4, 2),
+                                 V2::WaveVal(1, 9, 6),
+                                 V2::WaveVal(1, 9, 10),
+                                 V2::WaveVal(1, 9, 12),
+                                 V2::WaveVal(1, 9, 17),
+                                 V2::WaveVal(1, 9, 20, 5),
+                                 V2::WaveVal(1, 9, 20),
+                                 V2::WaveVal(1, 9, 17),
+                                 V2::WaveVal(1, 9, 12),
+                                 V2::WaveVal(1, 9, 10),
+                                 V2::WaveVal(1, 9, 6)};
 }
 
 }
 }
-

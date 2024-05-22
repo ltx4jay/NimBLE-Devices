@@ -174,10 +174,10 @@ NimBLE::COYOTE::Device::V2::run()
         //
 
         // Check if a new waveform was started (t=0)
-        for (auto& it : mChannel) it->startNewWaveform();
+        for (auto& it : mChannel) ((V2Channel*) it)->startNewWaveform();
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
 
-        for (auto& it : mChannel) it->sendNextSegment();
+        for (auto& it : mChannel) ((V2Channel*) it)->sendNextSegment();
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
     }
 }
@@ -298,10 +298,10 @@ V2Channel::sendNextSegment()
         if (mPlaying.iter == mPlaying.wave.end()) {
             mPlaying.iter = mPlaying.wave.begin();
         }
+        if (mPlaying.iter == mPlaying.wave.end()) return;
 
         mPlaying.nLeft = (((mPlaying.iter->duration() - 1) / 100) + 1) * mPlaying.iter->getRepeat();
     }
-    if (mPlaying.nLeft == 0) return;
     
     // ESP_LOGI("ESTIM", "Segment: %d %d %d x %d (%d)", mPlaying.iter->x, mPlaying.iter->y, mPlaying.iter->z, mPlaying.iter->repeat, mPlaying.nLeft);
     mChar->writeValue(*mPlaying.iter, 3, false);

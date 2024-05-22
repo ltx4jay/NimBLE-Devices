@@ -28,10 +28,14 @@ namespace COYOTE {
 class Channel;
 class Device;
 
+namespace V3 {
+    class WaveVal;
+}
+
 inline namespace V2 {
 
 //
-// One waveform segment
+// One V2.0 waveform segment
 //
 struct WaveVal {
 public:
@@ -67,6 +71,8 @@ private:
     uint32_t   rsvd : 12;
 
     uint16_t   repeat;
+
+    friend class V3::WaveVal;
 };
 
 //
@@ -75,6 +81,55 @@ private:
 typedef std::vector<WaveVal>  Waveform;
 
 };  // COYOTE::V2
+
+
+namespace V3 {
+
+//
+// One V3.0 waveform segment
+//
+struct WaveVal {
+public:
+    //
+    // Construct a waveform segment with the specified frequency (10..240) and intensity (0..100),
+    // optionally repeated the specified number of times
+    //
+    WaveVal(uint8_t freq, uint16_t intensity, uint16_t rpt = 1);
+
+    //
+    // Construct a V3 waveform segment from a V2 segment
+    //
+    WaveVal(V2::WaveVal v2);
+
+    //
+    // Total length, in ms, of this waveform segment
+    //
+    unsigned int duration() const;
+
+    //
+    // Getthe number of times this waveform segment is repeated
+    //
+    uint16_t getRepeat() const;
+
+    //
+    // Return the wave frequency and intensity
+    //
+    uint8_t getFreq() const;
+    uint8_t getInt() const;
+    
+private:
+    uint8_t xy;
+    uint8_t z;
+
+    uint16_t repeat;
+};
+
+//
+// A waveform is a sequence of waveform segments
+//
+typedef std::vector<WaveVal>  Waveform;
+
+};  // COYOTE::V3
 
 
 //
@@ -109,10 +164,16 @@ public:
     void subscribePower(std::function<void(uint8_t)> fct);
 
     //
-    // Play the specified waveform, at the specified power.
+    // Play the specified V2 waveform, at the specified power.
     // If power is not specified, use current power
     //
     virtual void setWaveform(const V2::Waveform& wave, uint8_t power = 0) = 0;
+
+    //
+    // Play the specified V3 waveform, at the specified power.
+    // If power is not specified, use current power
+    //
+    virtual void setWaveform(const V3::Waveform& wave, uint8_t power = 0) {};
 
     //
     // Start playing the waveform (if any) for the specified number of secs (forever if 0)
@@ -141,9 +202,6 @@ protected:
 
     void updatePower(uint8_t power);
     virtual bool powerUpdateReq(uint8_t& power) = 0;
-
-    virtual void startNewWaveform() = 0;
-    virtual void sendNextSegment()  = 0;
 
     friend class Device;
 };
@@ -241,6 +299,11 @@ public:
     virtual void setMaxPower(uint8_t A, uint8_t B) override;
 
 private:
+    NimBLERemoteCharacteristic* mCharac;
+    uint8_t                     mNextSerial;
+    uint8_t                     mPendingSerial;
+    void notifyResp(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
+
     virtual bool initDevice()  override;
     virtual void run() override;
 };

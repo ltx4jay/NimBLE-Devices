@@ -159,6 +159,11 @@ public:
     uint8_t getPower();
 
     //
+    // Set waveform balance parameters (V3 only)
+    //
+    virtual void setFreqBalance(uint8_t bal1, uint8_t bal2) {};
+
+    //
     // Subscribe to power change updates (optional)
     //
     void subscribePower(std::function<void(uint8_t)> fct);
@@ -205,6 +210,8 @@ protected:
 
     friend class Device;
 };
+class V2Channel;
+class V3Channel;
 
 //
 // A Coyote device
@@ -262,6 +269,8 @@ private:
     void notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
 
     friend class Channel;
+    friend class V2Channel;
+    friend class V3Channel;
 };
 
 
@@ -302,10 +311,14 @@ private:
     NimBLERemoteCharacteristic* mCharac;
     uint8_t                     mNextSerial;
     uint8_t                     mPendingSerial;
+    uint8_t                     mFreqBal[7];
+
     void notifyResp(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
 
     virtual bool initDevice()  override;
     virtual void run() override;
+
+    friend class V3Channel;
 };
 
 

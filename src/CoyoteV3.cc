@@ -19,7 +19,7 @@
 using namespace NimBLE::COYOTE;
 
 
-class V3Channel : public Channel
+class NimBLE::COYOTE::V3Channel : public Channel
 {
 public:
     V3Channel(Device* parent, const char* name);
@@ -33,6 +33,7 @@ public:
         unsigned int                 nLeft;
     } mPlaying;
 
+    virtual void setFreqBalance(uint8_t bal1, uint8_t bal2) override;
     virtual void setWaveform(const V2::Waveform& wave, uint8_t power = 0) override;
     virtual void setWaveform(const V3::Waveform& wave, uint8_t power = 0) override;
     virtual void start(long secs = 0) override;
@@ -84,8 +85,8 @@ NimBLE::COYOTE::Device::V3::initDevice()
     if (resp != nullptr) resp->subscribe(true, std::bind(&Device::V3::notifyResp, this,
                                                          std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
-    mChannel[0] = new V3Channel(this, "A");
-    mChannel[1] = new V3Channel(this, "B");
+    mChannel[0] = new NimBLE::COYOTE::V3Channel(this, "A");
+    mChannel[1] = new NimBLE::COYOTE::V3Channel(this, "B");
 
     return true;
 }
@@ -108,7 +109,8 @@ NimBLE::COYOTE::Device::V3::run()
     uint8_t msg[20];
 
     // Set max power (200) and balance parameters (32, 32)
-    mCharac->writeValue((uint8_t*) "\xBF\xC8\xC8\x20\x20\x20\x20", 7, false);
+    mChannel[0]->setFreqBalance(32, 32);
+    mChannel[1]->setFreqBalance(32, 32);
     
     while (1) {
         msg[0] = 0xB0;
@@ -138,17 +140,17 @@ NimBLE::COYOTE::Device::V3::run()
             if (mPendingSerial) {
                 mNextSerial += 0x10;
                 if (mNextSerial == 0x00) mNextSerial = 0x10;
+
+                ESP_LOGI(getName(), "Set power to A:%d->%d  B:%d->%d",
+                         (uint16_t)getChannelA().getPower(), powA,
+                         (uint16_t)getChannelB().getPower(), powB);
             }
         }
-
-        ESP_LOGI(getName(), "Set power to A:%d->%d  B:%d->%d",
-                 (uint16_t)getChannelA().getPower(), powA,
-                 (uint16_t)getChannelB().getPower(), powB);
 
         int k = 4;
         for (auto& it : mChannel) {
             for (unsigned i = 0; i < 4; i++) {
-                ((V3Channel*) it)->getNextSegment(msg[k], msg[k+4]);
+                ((NimBLE::COYOTE::V3Channel*) it)->getNextSegment(msg[k], msg[k+4]);
                 k++;
             }
         }
@@ -174,6 +176,7 @@ NimBLE::COYOTE::Device::V3::notifyResp(NimBLERemoteCharacteristic* pRemoteCharac
     }
 
     if (pData[0] == 0xBE) {
+        memcpy(mFreqBal, pData, sizeof(mFreqBal));
         ESP_LOGI(getName(), "MaxPow: %d %d   Balance Params: %d/%d %d/%d", pData[1], pData[2], pData[3], pData[5], pData[4], pData[6]);
         return;
     }
@@ -241,9 +244,35 @@ NimBLE::COYOTE::V3::WaveVal::getInt() const
     return z;
 }
 
+NimBLE::COYOTE::V3Channel::V3Channel(Device *parent, const char* name)
+    : Channel(parent, name)
+    , mPlaying{xSemaphoreCreateRecursiveMutex(), false}
+{
+}
 
 void
-V3Channel::setWaveform(const V2::Waveform& wave, uint8_t power)
+NimBLE::COYOTE::V3Channel::setFreqBalance(uint8_t bal1, uint8_t bal2)
+{
+    auto pDev = (Device::V3*) mDevice;
+    
+    pDev->mFreqBal[0] = 0xBF;
+    pDev->mFreqBal[1] = 0xC8;
+    pDev->mFreqBal[2] = 0xC8;
+
+    if (pDev->mChannel[0] == this) {
+        pDev->mFreqBal[3] = bal1;
+        pDev->mFreqBal[4] = bal2;
+    } else {
+        pDev->mFreqBal[5] = bal1;
+        pDev->mFreqBal[6] = bal2;
+    }
+
+    pDev->mCharac->writeValue(pDev->mFreqBal, sizeof(pDev->mFreqBal), false);
+}
+
+
+void
+NimBLE::COYOTE::V3Channel::setWaveform(const V2::Waveform& wave, uint8_t power)
 {
     SemLockGuard lk(mPlaying.mutex);
 
@@ -256,7 +285,7 @@ V3Channel::setWaveform(const V2::Waveform& wave, uint8_t power)
 }
 
 void
-V3Channel::setWaveform(const V3::Waveform& wave, uint8_t power)
+NimBLE::COYOTE::V3Channel::setWaveform(const V3::Waveform& wave, uint8_t power)
 {
     SemLockGuard lk(mPlaying.mutex);
 
@@ -269,7 +298,7 @@ V3Channel::setWaveform(const V3::Waveform& wave, uint8_t power)
 
 
 void
-V3Channel::start(long secs)
+NimBLE::COYOTE::V3Channel::start(long secs)
 {
     NimBLE::COYOTE::Channel::start(secs);
 
@@ -284,7 +313,7 @@ V3Channel::start(long secs)
 
 
 void
-V3Channel::stop()
+NimBLE::COYOTE::V3Channel::stop()
 {
     NimBLE::COYOTE::Channel::stop();
 
@@ -295,7 +324,7 @@ V3Channel::stop()
 
 
 void
-V3Channel::getNextSegment(uint8_t &freq, uint8_t &intensity)
+NimBLE::COYOTE::V3Channel::getNextSegment(uint8_t &freq, uint8_t &intensity)
 {
     freq      = 255;
     intensity = 255;

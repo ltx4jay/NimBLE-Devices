@@ -18,7 +18,7 @@
 
 using namespace NimBLE::COYOTE;
 
-class V2Channel : public Channel
+class NimBLE::COYOTE::V2Channel : public Channel
 {
 public:
     V2Channel(Device* parent, const char* name, NimBLERemoteCharacteristic* charac);
@@ -84,8 +84,8 @@ NimBLE::COYOTE::Device::V2::initDevice()
         notifyEvent(ERROR);
         return false;
     }
-    mChannel[0] = new V2Channel(this, "A", pSvc->getCharacteristic("955A1506-0FE2-F5AA-A094-84B8D4F3E8AD"));
-    mChannel[1] = new V2Channel(this, "B", pSvc->getCharacteristic("955A1505-0FE2-F5AA-A094-84B8D4F3E8AD"));
+    mChannel[0] = new NimBLE::COYOTE::V2Channel(this, "A", pSvc->getCharacteristic("955A1506-0FE2-F5AA-A094-84B8D4F3E8AD"));
+    mChannel[1] = new NimBLE::COYOTE::V2Channel(this, "B", pSvc->getCharacteristic("955A1505-0FE2-F5AA-A094-84B8D4F3E8AD"));
 
     struct CFGval {
         uint32_t   step    :  8;
@@ -174,10 +174,10 @@ NimBLE::COYOTE::Device::V2::run()
         //
 
         // Check if a new waveform was started (t=0)
-        for (auto& it : mChannel) ((V2Channel*) it)->startNewWaveform();
+        for (auto& it : mChannel) ((NimBLE::COYOTE::V2Channel*) it)->startNewWaveform();
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
 
-        for (auto& it : mChannel) ((V2Channel*) it)->sendNextSegment();
+        for (auto& it : mChannel) ((NimBLE::COYOTE::V2Channel*) it)->sendNextSegment();
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
     }
 }
@@ -230,7 +230,7 @@ NimBLE::COYOTE::V2::WaveVal::operator uint8_t*() const
 }
 
 
-V2Channel::V2Channel(Device *parent, const char* name, NimBLERemoteCharacteristic *charac)
+NimBLE::COYOTE::V2Channel::V2Channel(Device *parent, const char* name, NimBLERemoteCharacteristic *charac)
     : Channel(parent, name)
     , mChar(charac)
     , mPlaying{xSemaphoreCreateRecursiveMutex(), false, false}
@@ -239,7 +239,7 @@ V2Channel::V2Channel(Device *parent, const char* name, NimBLERemoteCharacteristi
 
 
 void
-V2Channel::setWaveform(const V2::Waveform& wave, uint8_t power)
+NimBLE::COYOTE::V2Channel::setWaveform(const V2::Waveform& wave, uint8_t power)
 {
     SemLockGuard lk(mPlaying.mutex);
     
@@ -253,7 +253,7 @@ V2Channel::setWaveform(const V2::Waveform& wave, uint8_t power)
 
 
 void
-V2Channel::start(long secs)
+NimBLE::COYOTE::V2Channel::start(long secs)
 {
     NimBLE::COYOTE::Channel::start(secs);
 
@@ -268,7 +268,7 @@ V2Channel::start(long secs)
 }
 
 void
-V2Channel::stop()
+NimBLE::COYOTE::V2Channel::stop()
 {
     NimBLE::COYOTE::Channel::stop();
 
@@ -280,7 +280,7 @@ V2Channel::stop()
 
 
 void
-V2Channel::startNewWaveform()
+NimBLE::COYOTE::V2Channel::startNewWaveform()
 {
     SemLockGuard lk(mPlaying.mutex);
 
@@ -292,7 +292,7 @@ V2Channel::startNewWaveform()
 
 
 void
-V2Channel::sendNextSegment()
+NimBLE::COYOTE::V2Channel::sendNextSegment()
 {
     if (mPlaying.nLeft == 0) {
         if (mPlaying.iter == mPlaying.wave.end()) {
@@ -322,7 +322,7 @@ NimBLE::COYOTE::Device::V2::setMaxPower(uint8_t A, uint8_t B)
 }
 
 bool
-V2Channel::powerUpdateReq(uint8_t& pow)
+NimBLE::COYOTE::V2Channel::powerUpdateReq(uint8_t& pow)
 {
     pow = mSetPower;
     return mPower != mSetPower;

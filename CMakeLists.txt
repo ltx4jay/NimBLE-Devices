@@ -9,6 +9,8 @@ idf_component_register(
     "src/Nimble-Device.cc"
     "src/AB-Shutter-3.cc"
     "src/Coyote.cc"
+    "src/CoyoteV2.cc"
+    "src/CoyoteV3.cc"
     "src/Switch.cc"
     "src/Keyboard.cc"
 )

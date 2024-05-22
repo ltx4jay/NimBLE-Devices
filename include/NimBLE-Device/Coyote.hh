@@ -19,7 +19,7 @@
 #include "NimBLE-Device.hh"
 
 #include <freertos/FreeRTOS.h>
-
+#include <string>
 
 namespace NimBLE {
 
@@ -108,51 +108,41 @@ public:
     // Play the specified waveform, at the specified power.
     // If power is not specified, use current power
     //
-    void setWaveform(const V2::Waveform& wave, uint8_t power = 0);
+    virtual void setWaveform(const V2::Waveform& wave, uint8_t power = 0) = 0;
 
     //
     // Start playing the waveform (if any) for the specified number of secs (forever if 0)
     //
-    void start(long secs = 0);
+    virtual void start(long secs = 0);
 
     //
     // Stop/Pause playing the waveform (if any)
     //
-    void stop();
-    
+    virtual void stop();
 
-private:
+protected:
     Channel(Device* parent, const char* name);
+    virtual ~Channel()
+    {}
 
-    Device*      mDevice;
-    std::string  mName;
+    Device*     mDevice;
+    std::string mName;
 
-    NimBLERemoteCharacteristic* mChar;
-
-    uint16_t  mMaxPower;
-    uint16_t  mSetPower;
-    uint16_t  mPower;
-    bool      mSafeMode;
+    uint16_t mMaxPower;
+    uint16_t mSetPower;
+    uint16_t mPower;
+    bool     mSafeMode;
 
     std::function<void(uint8_t)> mPowerCb;
 
     void updatePower(uint8_t power);
+    virtual bool powerUpdateReq(uint8_t& power) = 0;
 
-    struct Playing {
-        SemaphoreHandle_t            mutex;
-        bool                         start;
-        bool                         run;
-        V2::Waveform                 wave;
-        V2::Waveform::const_iterator iter;
-        unsigned int                 nLeft;
-    } mPlaying;
-
-    void findNextSegment();
-    void sendNextSegment();
+    virtual void startNewWaveform() = 0;
+    virtual void sendNextSegment()  = 0;
 
     friend class Device;
 };
-
 
 //
 // A Coyote device
@@ -189,28 +179,35 @@ public:
     //
     void serviceLoop(long nowInMs)  override;
 
-
 private:
-    struct {
-        SemaphoreHandle_t             mutex;
-        uint16_t                      step;
-        uint16_t                      max;
-        NimBLERemoteCharacteristic   *charac;
-    } mPower;
+    class Vx {
+    public:
+        virtual ~Vx();
 
-    Channel mChannel[2];
+        virtual void setMaxPower(uint8_t A, uint8_t B) = 0;
+        virtual void run() = 0;
 
-    bool doInitDevice()  override;
+    protected:
+        Vx(Device* parent);
 
-    void notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
+        Device* mParent;
+    };
+
+    class V2;
+    class V3;
+
+    Vx      *mImp;
+    Channel *mChannel[2];
+
     std::function<void(uint8_t)> mBatteryCb;
 
-    void notifyPower(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
+    bool doInitDevice()  override;
 
     TaskHandle_t  mTaskHandle;
     static void   runTask(void *pvParameter);
 
     friend class Channel;
+    friend class Vx;
 };
 
 

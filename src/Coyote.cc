@@ -95,6 +95,12 @@ NimBLE::COYOTE::Channel::updatePower(uint8_t power)
     mPower = power;
 }
 
+bool
+NimBLE::COYOTE::Channel::powerUpdateReq(uint8_t& pow)
+{
+    pow = mSetPower;
+    return mPower != mSetPower;
+}
 
 void
 NimBLE::COYOTE::Channel::start(long secs)

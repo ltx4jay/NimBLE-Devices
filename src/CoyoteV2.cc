@@ -39,8 +39,6 @@ public:
     virtual void start(long secs = 0) override;
     virtual void stop() override;
 
-    bool powerUpdateReq(uint8_t& pow) override;
-
     void startNewWaveform();
     void sendNextSegment();
 };
@@ -319,11 +317,4 @@ NimBLE::COYOTE::Device::V2::setMaxPower(uint8_t A, uint8_t B)
 
     getChannelA().mMaxPower = A;
     getChannelB().mMaxPower = B;
-}
-
-bool
-NimBLE::COYOTE::V2Channel::powerUpdateReq(uint8_t& pow)
-{
-    pow = mSetPower;
-    return mPower != mSetPower;
 }

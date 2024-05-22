@@ -206,7 +206,7 @@ protected:
     std::function<void(uint8_t)> mPowerCb;
 
     void updatePower(uint8_t power);
-    virtual bool powerUpdateReq(uint8_t& power) = 0;
+    bool powerUpdateReq(uint8_t& power);
 
     friend class Device;
 };

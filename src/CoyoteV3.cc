@@ -39,8 +39,6 @@ public:
     virtual void start(long secs = 0) override;
     virtual void stop() override;
 
-    bool powerUpdateReq(uint8_t& pow) override;
-
     void getNextSegment(uint8_t &freq, uint8_t &intensity);
 };
 

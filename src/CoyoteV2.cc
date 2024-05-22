@@ -14,40 +14,78 @@
 //
 
 #include "NimBLE-Device/Coyote.hh"
-#include "CoyoteV2.hh"
 
 
 using namespace NimBLE::COYOTE;
 
-NimBLE::COYOTE::Device::V2::V2(Device* parent)
-: Vx(parent)
+class V2Channel : public Channel
 {
-    auto pSvc = parent->mClient->getService("955A180A-0FE2-F5AA-A094-84B8D4F3E8AD");
+public:
+    V2Channel(Device* parent, const char* name, NimBLERemoteCharacteristic* charac);
+
+    NimBLERemoteCharacteristic* mChar;
+
+    struct Playing
+    {
+        SemaphoreHandle_t            mutex;
+        bool                         start;
+        bool                         run;
+        V2::Waveform                 wave;
+        V2::Waveform::const_iterator iter;
+        unsigned int                 nLeft;
+    } mPlaying;
+
+    virtual void setWaveform(const V2::Waveform& wave, uint8_t power = 0) override;
+    virtual void start(long secs = 0) override;
+    virtual void stop() override;
+
+    bool powerUpdateReq(uint8_t& pow) override;
+
+    void startNewWaveform();
+    void sendNextSegment();
+};
+
+
+NimBLE::COYOTE::Device::V2::V2(const char* uniqueName, const char* macAddr)
+: Device(uniqueName, "D-LAB ESTIM01", macAddr)
+{
+}
+
+
+bool
+NimBLE::COYOTE::Device::V2::initDevice()
+{
+    auto pSvc = mClient->getService("955A180A-0FE2-F5AA-A094-84B8D4F3E8AD");
+    if (pSvc == NULL) {
+        ESP_LOGE(getName(), "Cannot find battery service.\n");
+        notifyEvent(ERROR);
+        return false;
+    }
 
     auto firmware = pSvc->getCharacteristic("955A1501-0FE2-F5AA-A094-84B8D4F3E8AD");
     uint16_t fw = * ((uint16_t*) firmware->readValue().data());
-    ESP_LOGI(parent->getName(), "Firmware %02x.%02x", fw & 0x00FF, fw >> 8);
+    ESP_LOGI(getName(), "Firmware %02x.%02x", fw & 0x00FF, fw >> 8);
 
     auto battery  = pSvc->getCharacteristic("955A1500-0FE2-F5AA-A094-84B8D4F3E8AD");
-    if (battery != nullptr) battery->subscribe(true, std::bind(&Device::V2::notifyBattery, this,
+    if (battery != nullptr) battery->subscribe(true, std::bind(&Device::notifyBattery, this,
                                                                std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
     
-    pSvc = parent->mClient->getService("955A180B-0FE2-F5AA-A094-84B8D4F3E8AD");
+    pSvc = mClient->getService("955A180B-0FE2-F5AA-A094-84B8D4F3E8AD");
     if (pSvc == NULL) {
-        ESP_LOGE(parent->getName(), "Cannot find power service.\n");
-        parent->notifyEvent(ERROR);
-        return;
+        ESP_LOGE(getName(), "Cannot find power service.\n");
+        notifyEvent(ERROR);
+        return false;
     }
   
     auto cfgChar      = pSvc->getCharacteristic("955A1507-0FE2-F5AA-A094-84B8D4F3E8AD");
     mPower.charac   = pSvc->getCharacteristic("955A1504-0FE2-F5AA-A094-84B8D4F3E8AD");
     if (cfgChar == nullptr || mPower.charac == nullptr) {
-        ESP_LOGE(parent->getName(), "Cannot find all power generator characteristics.\n");
-        parent->notifyEvent(ERROR);
-        return;
+        ESP_LOGE(getName(), "Cannot find all power generator characteristics.\n");
+        notifyEvent(ERROR);
+        return false;
     }
-    parent->mChannel[0] = new Device::V2::Channel(parent, "A", pSvc->getCharacteristic("955A1506-0FE2-F5AA-A094-84B8D4F3E8AD"));
-    parent->mChannel[1] = new Device::V2::Channel(parent, "B", pSvc->getCharacteristic("955A1505-0FE2-F5AA-A094-84B8D4F3E8AD"));
+    mChannel[0] = new V2Channel(this, "A", pSvc->getCharacteristic("955A1506-0FE2-F5AA-A094-84B8D4F3E8AD"));
+    mChannel[1] = new V2Channel(this, "B", pSvc->getCharacteristic("955A1505-0FE2-F5AA-A094-84B8D4F3E8AD"));
 
     struct CFGval {
         uint32_t   step    :  8;
@@ -61,23 +99,8 @@ NimBLE::COYOTE::Device::V2::V2(Device* parent)
     ESP_LOGI("ESTIM", "Power = %d / %d -> %d", cfg.maxPwr, cfg.step, mPower.max);
     mPower.charac->subscribe(true, std::bind(&Device::V2::notifyPower, this,
                                              std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_3));
-}
 
-
-NimBLE::COYOTE::Device::V2::Channel::Channel(Device *parent, const char* name, NimBLERemoteCharacteristic *charac)
-    : COYOTE::Channel(parent, name)
-    , mChar(charac)
-    , mPlaying{xSemaphoreCreateRecursiveMutex(), false, false}
-{
-}
-
-void
-NimBLE::COYOTE::Device::V2::notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify)
-{
-    uint8_t battery = pData[0];
-    ESP_LOGI(mParent->getName(), "Battery Level = %d%%", battery);
-
-    if (mParent->mBatteryCb) mParent->mBatteryCb(battery);
+    return true;
 }
 
 
@@ -104,12 +127,59 @@ void NimBLE::COYOTE::Device::V2::notifyPower(NimBLERemoteCharacteristic* pRemote
 {
     auto pow = (PowerVal*) pData;
 
-    mParent->getChannelA().updatePower(pow->A/mPower.step);
-    mParent->getChannelB().updatePower(pow->B/mPower.step);
+    getChannelA().updatePower(pow->A/mPower.step);
+    getChannelB().updatePower(pow->B/mPower.step);
 
-    ESP_LOGI(mParent->getName(), "Power Setting  A:%3d -> %d   B:%3d -> %d",
-             mParent->getChannelA().mPower, mParent->getChannelA().mSetPower,
-             mParent->getChannelB().mPower, mParent->getChannelB().mSetPower);
+    ESP_LOGI(getName(), "Power Setting  A:%3d -> %d   B:%3d -> %d",
+             getChannelA().mPower, getChannelA().mSetPower,
+             getChannelB().mPower, getChannelB().mSetPower);
+}
+
+
+void
+NimBLE::COYOTE::Device::V2::run()
+{
+    auto xLastWakeTime = xTaskGetTickCount();
+
+    unsigned int nextPowerUpdate = 0;
+    while (1) {
+        // Update power every second
+        if (nextPowerUpdate == 0) {
+
+            uint8_t powA;
+            uint8_t powB;
+            bool    newPower = getChannelA().powerUpdateReq(powA) ||
+                            getChannelB().powerUpdateReq(powB);
+
+            // Only update power if there was a change requested
+            if (!newPower) return;
+
+            ESP_LOGI(getName(), "Set power to A:%d->%d  B:%d->%d",
+                     (uint16_t) getChannelA().getPower(), powA,
+                     (uint16_t) getChannelB().getPower(), powB);
+
+            PowerVal pwr(powA * mPower.step, powB * mPower.step);
+
+            mPower.charac->writeValue(pwr, 3, false);
+
+            nextPowerUpdate = 10;
+        } else {
+            nextPowerUpdate--;
+        }
+
+        //
+        // Send a waveform segment every 100ms to keep the generator alive.
+        // To make sure the segment is present, we sent the first segment
+        // at t=0, then we send the subsequent ones at t=50, 150, 250, etcc
+        //
+
+        // Check if a new waveform was started (t=0)
+        for (auto& it : mChannel) it->startNewWaveform();
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
+
+        for (auto& it : mChannel) it->sendNextSegment();
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
+    }
 }
 
 
@@ -147,14 +217,29 @@ NimBLE::COYOTE::V2::WaveVal::duration() const
 }
 
 
+uint16_t
+NimBLE::COYOTE::V2::WaveVal::getRepeat() const
+{
+    return repeat;
+}
+
+
 NimBLE::COYOTE::V2::WaveVal::operator uint8_t*() const
 {
     return (uint8_t*) this;
 }
 
 
+V2Channel::V2Channel(Device *parent, const char* name, NimBLERemoteCharacteristic *charac)
+    : Channel(parent, name)
+    , mChar(charac)
+    , mPlaying{xSemaphoreCreateRecursiveMutex(), false, false}
+{
+}
+
+
 void
-NimBLE::COYOTE::Device::V2::Channel::setWaveform(const COYOTE::V2::Waveform& wave, uint8_t power)
+V2Channel::setWaveform(const V2::Waveform& wave, uint8_t power)
 {
     SemLockGuard lk(mPlaying.mutex);
     
@@ -168,7 +253,7 @@ NimBLE::COYOTE::Device::V2::Channel::setWaveform(const COYOTE::V2::Waveform& wav
 
 
 void
-NimBLE::COYOTE::Device::V2::Channel::start(long secs)
+V2Channel::start(long secs)
 {
     NimBLE::COYOTE::Channel::start(secs);
 
@@ -183,7 +268,7 @@ NimBLE::COYOTE::Device::V2::Channel::start(long secs)
 }
 
 void
-NimBLE::COYOTE::Device::V2::Channel::stop()
+V2Channel::stop()
 {
     NimBLE::COYOTE::Channel::stop();
 
@@ -195,7 +280,7 @@ NimBLE::COYOTE::Device::V2::Channel::stop()
 
 
 void
-NimBLE::COYOTE::Device::V2::Channel::startNewWaveform()
+V2Channel::startNewWaveform()
 {
     SemLockGuard lk(mPlaying.mutex);
 
@@ -207,14 +292,14 @@ NimBLE::COYOTE::Device::V2::Channel::startNewWaveform()
 
 
 void
-NimBLE::COYOTE::Device::V2::Channel::sendNextSegment()
+V2Channel::sendNextSegment()
 {
     if (mPlaying.nLeft == 0) {
         if (mPlaying.iter == mPlaying.wave.end()) {
             mPlaying.iter = mPlaying.wave.begin();
         }
 
-        mPlaying.nLeft = (((mPlaying.iter->duration() - 1) / 100) + 1) * mPlaying.iter->repeat;
+        mPlaying.nLeft = (((mPlaying.iter->duration() - 1) / 100) + 1) * mPlaying.iter->getRepeat();
     }
     if (mPlaying.nLeft == 0) return;
     
@@ -232,59 +317,13 @@ NimBLE::COYOTE::Device::V2::setMaxPower(uint8_t A, uint8_t B)
     if (A > mPower.max) A = mPower.max;
     if (B > mPower.max) B = mPower.max;
 
-    mParent->getChannelA().mMaxPower = A;
-    mParent->getChannelB().mMaxPower = B;
+    getChannelA().mMaxPower = A;
+    getChannelB().mMaxPower = B;
 }
 
 bool
-NimBLE::COYOTE::Device::V2::Channel::powerUpdateReq(uint8_t& pow)
+V2Channel::powerUpdateReq(uint8_t& pow)
 {
     pow = mSetPower;
     return mPower != mSetPower;
-}
-
-void
-NimBLE::COYOTE::Device::V2::run()
-{
-    auto xLastWakeTime = xTaskGetTickCount();
-
-    unsigned int nextPowerUpdate = 0;
-    while (1) {
-        // Update power every second
-        if (nextPowerUpdate == 0) {
-
-            uint8_t powA;
-            uint8_t powB;
-            bool    newPower = mParent->getChannelA().powerUpdateReq(powA) ||
-                            mParent->getChannelB().powerUpdateReq(powB);
-
-            // Only update power if there was a change requested
-            if (!newPower) return;
-
-            ESP_LOGI(mParent->getName(), "Set power to A:%d->%d  B:%d->%d",
-                     (uint16_t)mParent->getChannelA().getPower(), powA,
-                     (uint16_t)mParent->getChannelB().getPower(), powB);
-
-            PowerVal pwr(powA * mPower.step, powB * mPower.step);
-
-            mPower.charac->writeValue(pwr, 3, false);
-
-            nextPowerUpdate = 10;
-        } else {
-            nextPowerUpdate--;
-        }
-
-        //
-        // Send a waveform segment every 100ms to keep the generator alive.
-        // To make sure the segment is present, we sent the first segment
-        // at t=0, then we send the subsequent ones at t=50, 150, 250, etcc
-        //
-
-        // Check if a new waveform was started (t=0)
-        for (auto& it : mParent->mChannel) it->startNewWaveform();
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
-
-        for (auto& it : mParent->mChannel) it->sendNextSegment();
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
-    }
 }

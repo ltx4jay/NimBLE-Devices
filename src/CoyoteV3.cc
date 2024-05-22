@@ -14,17 +14,21 @@
 //
 
 #include "NimBLE-Device/Coyote.hh"
-#include "CoyoteV3.hh"
 
 
 using namespace NimBLE::COYOTE;
 
-NimBLE::COYOTE::Device::V3::V3(Device* parent)
-: Vx(parent)
+NimBLE::COYOTE::Device::V3::V3(const char* uniqueName, const char* macAddr)
+: Device(uniqueName, "47L121000", macAddr)
 {
-
 }
 
+
+bool
+NimBLE::COYOTE::Device::V2::initDevice()
+{
+    return false;
+}
 
 void
 NimBLE::COYOTE::Device::V3::setMaxPower(uint8_t A, uint8_t B)
@@ -39,33 +43,53 @@ NimBLE::COYOTE::Device::V3::run()
 }
 
 
-NimBLE::COYOTE::Device::V3::Channel::Channel(Device *parent, const char* name)
-    : COYOTE::Channel(parent, name)
+class V3Channel : public Channel
 {
-}
+public:
+    V3Channel(Device* parent, const char* name);
+
+    struct Playing
+    {
+        SemaphoreHandle_t            mutex;
+        bool                         start;
+        bool                         run;
+        V2::Waveform                 wave;
+        V2::Waveform::const_iterator iter;
+        unsigned int                 nLeft;
+    } mPlaying;
+
+    virtual void setWaveform(const V2::Waveform& wave, uint8_t power = 0) override;
+    virtual void start(long secs = 0) override;
+    virtual void stop() override;
+
+    bool powerUpdateReq(uint8_t& pow) override;
+
+    void startNewWaveform();
+    void sendNextSegment();
+};
 
 
 void
-NimBLE::COYOTE::Device::V3::Channel::setWaveform(const COYOTE::V2::Waveform& wave, uint8_t power)
+V3Channel::setWaveform(const V2::Waveform& wave, uint8_t power)
 {
 }
 
 void
-NimBLE::COYOTE::Device::V3::Channel::start(long secs)
+V3Channel::start(long secs)
 {
 }
 
 void
-NimBLE::COYOTE::Device::V3::Channel::stop()
+V3Channel::stop()
 {
 }
 
 void
-NimBLE::COYOTE::Device::V3::Channel::startNewWaveform()
+V3Channel::startNewWaveform()
 {
 }
 
 void
-NimBLE::COYOTE::Device::V3::Channel::sendNextSegment()
+V3Channel::sendNextSegment()
 {
 }

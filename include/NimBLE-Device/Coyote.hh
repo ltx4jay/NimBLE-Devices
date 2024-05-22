@@ -49,8 +49,17 @@ public:
     // Total length, in ms, of this waveform segment
     //
     unsigned int duration() const;
-    
 
+    //
+    // Getthe number of times this waveform segment is repeated
+    //
+    uint16_t getRepeat() const;
+
+    //
+    // Return the wave segment in transmit order
+    //
+    operator uint8_t*() const;
+    
 private:
     uint32_t   x    :  5;
     uint32_t   y    : 10;
@@ -58,11 +67,6 @@ private:
     uint32_t   rsvd : 12;
 
     uint16_t   repeat;
-
-    operator uint8_t*() const;
-
-    friend class COYOTE::Channel;
-    friend class COYOTE::Device;
 };
 
 //
@@ -150,18 +154,16 @@ protected:
 class Device : public NimBLE::InterestingDevice
 {
 public:
-    //
-    // A Coyote device with the specified unique name and optional MAC address
-    // If no address is specified, the first one found will match
-    //
-    Device(const char* uniqueName, const char* macAddr = NULL);
+    class V2;
+    class V3;
+
     virtual ~Device();
 
     //
     // Set the absolute maximum power levels that can be set on each channel.
     // Default is 100
     //
-    void setMaxPower(uint8_t A, uint8_t B);
+    virtual void setMaxPower(uint8_t A, uint8_t B) = 0;
 
     //
     // Get a reference to each channel interface
@@ -177,37 +179,70 @@ public:
     //
     // Service the Coyote
     //
-    void serviceLoop(long nowInMs)  override;
+    virtual void serviceLoop(long nowInMs)  override;
+
+
+protected:
+    //
+    // A Coyote device with the specified unique name and optional MAC address
+    // If no address is specified, the first one found will match
+    //
+    Device(const char* uniqueName, const char* bleName, const char* macAddr = NULL);
+
 
 private:
-    class Vx {
-    public:
-        virtual ~Vx();
-
-        virtual void setMaxPower(uint8_t A, uint8_t B) = 0;
-        virtual void run() = 0;
-
-    protected:
-        Vx(Device* parent);
-
-        Device* mParent;
-    };
-
-    class V2;
-    class V3;
-
-    Vx      *mImp;
     Channel *mChannel[2];
 
+    virtual bool doInitDevice()  override final;
+    virtual bool initDevice() = 0;
+
+    TaskHandle_t mTaskHandle;
+    static void  runTask(void* pvParameter);
+    virtual void run() = 0;
+
     std::function<void(uint8_t)> mBatteryCb;
-
-    bool doInitDevice()  override;
-
-    TaskHandle_t  mTaskHandle;
-    static void   runTask(void *pvParameter);
+    void notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
 
     friend class Channel;
-    friend class Vx;
+};
+
+
+class Device::V2 : public Device {
+public:
+    //
+    // A Coyote V2.0 device with the specified unique name and optional MAC address
+    // If no address is specified, the first one found will match
+    //
+    V2(const char* uniqueName, const char* macAddr = NULL);
+
+    virtual void setMaxPower(uint8_t A, uint8_t B) override;
+
+private:
+    struct {
+        uint16_t                    step;
+        uint16_t                    max;
+        NimBLERemoteCharacteristic* charac;
+    } mPower;
+
+    virtual bool initDevice()  override;
+    virtual void run() override;
+    void notifyPower(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
+};
+
+
+class Device::V3 : public Device {
+public:
+    //
+    // A Coyote V2.0 device with the specified unique name and optional MAC address
+    // If no address is specified, the first one found will match
+    //
+    V3(const char* uniqueName, const char* macAddr = NULL);
+
+    virtual void setMaxPower(uint8_t A, uint8_t B) override;
+
+private:
+    virtual bool initDevice()  override;
+    virtual void run() override;
 };
 
 

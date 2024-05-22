@@ -14,8 +14,6 @@
 //
 
 #include "NimBLE-Device/Coyote.hh"
-#include "CoyoteV2.hh"
-#include "CoyoteV3.hh"
 
 
 using namespace NimBLE::COYOTE;
@@ -110,8 +108,8 @@ NimBLE::COYOTE::Channel::stop()
 }
 
 
-NimBLE::COYOTE::Device::Device(const char* uniqueName, const char* macAddr)
-    : InterestingDevice(uniqueName, "D-LAB ESTIM01", macAddr)
+NimBLE::COYOTE::Device::Device(const char* uniqueName, const char* bleName, const char* macAddr)
+    : InterestingDevice(uniqueName, bleName, macAddr)
     , mChannel{nullptr, nullptr}
 {
 }
@@ -119,7 +117,6 @@ NimBLE::COYOTE::Device::Device(const char* uniqueName, const char* macAddr)
 
 NimBLE::COYOTE::Device::~Device()
 {
-    if (mImp) delete mImp;
     if (mChannel[0] != nullptr) delete mChannel[0];
     if (mChannel[1] != nullptr) delete mChannel[1];
 }
@@ -128,32 +125,13 @@ NimBLE::COYOTE::Device::~Device()
 bool
 NimBLE::COYOTE::Device::doInitDevice()
 {
-    mClient->discoverAttributes();    
-
-    // Which device version is it?
-    auto pSvc = mClient->getService("00000000-1000-8000-0080-5F9B34FB180A");
-    if (pSvc != nullptr) mImp = new Device::V3(this);
-    else {
-        pSvc = mClient->getService("955A180A-0FE2-F5AA-A094-84B8D4F3E8AD");
-        if (pSvc != nullptr) mImp = new Device::V2(this);
-        else {
-            ESP_LOGE(getName(), "Cannot find Battery service");
-            notifyEvent(ERROR);
-            return false;
-        }
-    }
+    mClient->discoverAttributes();
+    if (!initDevice()) return false;
 
     ESP_LOGI(getName(), "Connected!");
     xTaskCreate(&runTask, getName(), 8192, this, 5, &mTaskHandle);
 
     return true;
-}
-
-
-void
-NimBLE::COYOTE::Device::setMaxPower(uint8_t A, uint8_t B)
-{
-    if (mImp) mImp->setMaxPower(A, B);
 }
 
 
@@ -177,6 +155,15 @@ NimBLE::COYOTE::Device::subscribeBattery(std::function<void(uint8_t)> fct)
     mBatteryCb = fct;
 }
 
+void
+NimBLE::COYOTE::Device::notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify)
+{
+    uint8_t battery = pData[0];
+    ESP_LOGI(getName(), "Battery Level = %d%%", battery);
+
+    if (mBatteryCb) mBatteryCb(battery);
+}
+
 
 void
 NimBLE::COYOTE::Device::runTask(void *pvParameter)
@@ -188,17 +175,11 @@ NimBLE::COYOTE::Device::runTask(void *pvParameter)
     // There is no point in starting right away... let's wait 1 sec
     vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1000));
 
-    if (dev->mImp) dev->mImp->run();
+    dev->run();
 }
 
 
 void
 NimBLE::COYOTE::Device::serviceLoop(long nowInMs)
 {
-}
-
-NimBLE::COYOTE::Device::Vx::Vx(Device* parent)
-    : mParent(parent)
-{
-    
 }

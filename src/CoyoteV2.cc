@@ -47,6 +47,7 @@ public:
 NimBLE::COYOTE::Device::V2::V2(const char* uniqueName, const char* macAddr)
 : Device(uniqueName, "D-LAB ESTIM01", macAddr)
 {
+    ESP_LOGI("Coyote V2", "%s %s", uniqueName, macAddr);
 }
 
 
@@ -150,17 +151,17 @@ NimBLE::COYOTE::Device::V2::run()
                             getChannelB().powerUpdateReq(powB);
 
             // Only update power if there was a change requested
-            if (!newPower) return;
+            if (newPower) {
+                ESP_LOGI(getName(), "Set power to A:%d->%d  B:%d->%d",
+                         (uint16_t)getChannelA().getPower(), powA,
+                         (uint16_t)getChannelB().getPower(), powB);
 
-            ESP_LOGI(getName(), "Set power to A:%d->%d  B:%d->%d",
-                     (uint16_t) getChannelA().getPower(), powA,
-                     (uint16_t) getChannelB().getPower(), powB);
+                PowerVal pwr(powA * mPower.step, powB * mPower.step);
 
-            PowerVal pwr(powA * mPower.step, powB * mPower.step);
+                mPower.charac->writeValue(pwr, 3, false);
 
-            mPower.charac->writeValue(pwr, 3, false);
-
-            nextPowerUpdate = 10;
+                nextPowerUpdate = 10;
+            }
         } else {
             nextPowerUpdate--;
         }
@@ -292,6 +293,8 @@ NimBLE::COYOTE::V2Channel::startNewWaveform()
 void
 NimBLE::COYOTE::V2Channel::sendNextSegment()
 {
+    if (!mPlaying.run) return;
+    
     if (mPlaying.nLeft == 0) {
         if (mPlaying.iter == mPlaying.wave.end()) {
             mPlaying.iter = mPlaying.wave.begin();

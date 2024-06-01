@@ -118,6 +118,7 @@ NimBLE::COYOTE::Device::Device(const char* uniqueName, const char* bleName, cons
     : InterestingDevice(uniqueName, bleName, macAddr)
     , mChannel{nullptr, nullptr}
 {
+    ESP_LOGI("Coyote", "%s %s %s", uniqueName, bleName, macAddr);
 }
 
 

@@ -38,7 +38,6 @@ InterestingDevice::~InterestingDevice()
     if (mClient != NULL && mClient->isConnected()) mClient->disconnect();
 }
 
-
 bool
 InterestingDevice::addToDevicePool(InterestingDevice* dev, bool mustFind)
 {
@@ -58,10 +57,9 @@ InterestingDevice::foundDevice(NimBLEAdvertisedDevice* dev)
 {
     std::string macAddr = dev->getAddress().toString();
 
-    ESP_LOGI("NimBLE-Device", "Found \"%s\" (%s)", dev->getName().c_str(), macAddr.c_str());
+    ESP_LOGD("NimBLE-Device", "Found \"%s\" (%s)", dev->getName().c_str(), macAddr.c_str());
 
     for (auto it : sAllDevices) {
-        ESP_LOGI("NimBLE-Device", "Is it? \"%s\" (%s)", it->mDeviceName.c_str(), it->mAddress.toString().c_str());
         if (it->mFound) continue;
 
         if (it->mAddress != macAddr) continue;

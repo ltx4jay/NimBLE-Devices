@@ -24,6 +24,7 @@ NimBLE::COYOTE::Channel::Channel(Device *parent, const char* name)
     , mName(name)
     , mMaxPower(100)
     , mSetPower(0)
+    , mSentPower(0)
     , mPower()
     , mSafeMode(true)
 {
@@ -99,7 +100,7 @@ bool
 NimBLE::COYOTE::Channel::powerUpdateReq(uint8_t& pow)
 {
     pow = mSetPower;
-    return mPower != mSetPower;
+    return pow != mSentPower;
 }
 
 void

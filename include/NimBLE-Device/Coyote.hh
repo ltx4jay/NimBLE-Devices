@@ -200,6 +200,7 @@ protected:
 
     uint16_t mMaxPower;
     uint16_t mSetPower;
+    uint16_t mSentPower;
     uint16_t mPower;
     bool     mSafeMode;
 

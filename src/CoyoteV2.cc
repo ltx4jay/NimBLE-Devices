@@ -142,28 +142,23 @@ NimBLE::COYOTE::Device::V2::run()
 
     unsigned int nextPowerUpdate = 0;
     while (1) {
-        // Update power every second
-        if (nextPowerUpdate == 0) {
+        uint8_t powA;
+        uint8_t powB;
+        bool    newPower = getChannelA().powerUpdateReq(powA) ||
+                        getChannelB().powerUpdateReq(powB);
 
-            uint8_t powA;
-            uint8_t powB;
-            bool    newPower = getChannelA().powerUpdateReq(powA) ||
-                            getChannelB().powerUpdateReq(powB);
+        // Only update power if there was a change requested
+        if (newPower) {
+            ESP_LOGI(getName(), "Set power to A:%d->%d->%d  B:%d->%d->%d",
+                        (uint16_t)getChannelA().getPower(), (uint16_t)getChannelA().mSentPower, powA,
+                        (uint16_t)getChannelB().getPower(), (uint16_t)getChannelB().mSentPower, powB);
 
-            // Only update power if there was a change requested
-            if (newPower) {
-                ESP_LOGI(getName(), "Set power to A:%d->%d  B:%d->%d",
-                         (uint16_t)getChannelA().getPower(), powA,
-                         (uint16_t)getChannelB().getPower(), powB);
+            PowerVal pwr(powA * mPower.step, powB * mPower.step);
 
-                PowerVal pwr(powA * mPower.step, powB * mPower.step);
+            mPower.charac->writeValue(pwr, 3, false);
 
-                mPower.charac->writeValue(pwr, 3, false);
-
-                nextPowerUpdate = 10;
-            }
-        } else {
-            nextPowerUpdate--;
+            getChannelA().mSentPower = powA;
+            getChannelB().mSentPower = powB;
         }
 
         //

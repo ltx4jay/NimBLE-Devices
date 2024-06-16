@@ -8,6 +8,7 @@ idf_component_register(
   SRCS
     "src/Nimble-Device.cc"
     "src/AB-Shutter-3.cc"
+    "src/QB702.cc"
     "src/Coyote.cc"
     "src/CoyoteV2.cc"
     "src/CoyoteV3.cc"

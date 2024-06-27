@@ -16,13 +16,13 @@ using namespace NimBLE;
 std::vector<InterestingDevice*> InterestingDevice::sAllDevices;
 
 
-InterestingDevice::InterestingDevice(const char* name, const char* bleName, const char* macAddr)
+InterestingDevice::InterestingDevice(const char* name, const char* bleName, const char* macAddr, uint8_t addrType)
     : NimBLEClientCallbacks()
     , mDev(NULL)
     , mClient(NULL)
     , mUniqueName(name)
     , mDeviceName(bleName)
-    , mAddress(macAddr)
+    , mAddress(macAddr, addrType)
     , mMustFind(false)
     , mFound(false)
     , mConnected(false)
@@ -110,7 +110,7 @@ bool
 InterestingDevice::allFound()
 {
     for (auto it : sAllDevices) {
-        if (it->mMustFind && !it->mFound) return false;
+        if (it->mMustFind && !it->mInit) return false;
     }
     return true;
 }
@@ -149,12 +149,15 @@ InterestingDevice::initFoundDevices()
 {
     // Connect before probing for fast-fail
     for (auto it : sAllDevices) {
+        if (!it->mFound) continue;
+
         if (!it->connect()) {
             ESP_LOGI(it->getName(), "InterestingDevice connect() failed!");
             return false;
         }
     }
     for (auto it : sAllDevices) {
+        if (!it->mFound) continue;
         if (!it->initDevice()) return false;
     }
     return true;
@@ -164,7 +167,7 @@ InterestingDevice::initFoundDevices()
 bool
 InterestingDevice::initDevice()
 {
-    if (!mFound || mInit) return true;
+    if (mInit) return true;
     
     if (!connect()) {
         ESP_LOGE(getName(), "Cannot connect device");
@@ -191,13 +194,23 @@ InterestingDevice::isConnected()
 
 
 bool
+InterestingDevice::doConnect(bool refresh)
+{
+    if (!mClient->connect(refresh)) {
+        ESP_LOGI(mUniqueName.c_str(), "connect() failed!");
+        return false;
+    }
+
+    return true;
+}
+
+
+bool
 InterestingDevice::connect(bool refresh)
 {
     ESP_LOGI(mUniqueName.c_str(), "Connecting...");
-    if (!mFound || mConnected) return true;
-    
-    if (mDev == NULL) return true;
-            
+    if (mConnected) return true;
+                
     notifyEvent(START_CONNECT);
     
     /** Check if we have a client we should reuse first **/
@@ -208,9 +221,9 @@ InterestingDevice::connect(bool refresh)
          */
         mClient = NimBLEDevice::getClientByPeerAddress(mAddress);
         if (mClient) {
-            if (!mClient->connect(mDev, refresh)) {
-                mConnected = true;
+            if (doConnect(false)) {
                 notifyEvent(CONNECTED);
+                mConnected = true;
                 return true;
             }
         } else {
@@ -221,14 +234,14 @@ InterestingDevice::connect(bool refresh)
         }
     }
     if (mClient == NULL) {
-        mClient = NimBLEDevice::createClient();
+        mClient = NimBLEDevice::createClient(mAddress);
     }
     mClient->setClientCallbacks(this, false);
             
     /** Set how long we are willing to wait for the connection to complete (milliseconds), default is 30. */
     mClient->setConnectTimeout(3000);
         
-    if (!mClient->connect(mDev, refresh)) {
+    if (!doConnect(refresh)) {
         /** Created a client but failed to connect, don't need to keep it as it has no data */
         // This hangs...
         // NimBLEDevice::deleteClient(mClient);
@@ -274,3 +287,12 @@ void
 InterestingDevice::reset()
 {
 }
+
+
+void
+InterestingDevice::doDisconnect()
+{
+    mConnected = false;
+    mInit      = false;
+}
+

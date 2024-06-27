@@ -116,7 +116,7 @@ NimBLE::COYOTE::Channel::stop()
 
 
 NimBLE::COYOTE::Device::Device(const char* uniqueName, const char* bleName, const char* macAddr)
-    : InterestingDevice(uniqueName, bleName, macAddr)
+    : InterestingDevice(uniqueName, bleName, macAddr, 1)
     , mChannel{nullptr, nullptr}
 {
     ESP_LOGI("Coyote", "%s %s %s", uniqueName, bleName, macAddr);

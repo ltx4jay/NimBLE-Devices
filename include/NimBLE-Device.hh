@@ -145,9 +145,8 @@ protected:
 
     //
     // Create an interesting device with the given unique name, BLE device name, and MAC address
-    // If no MAC address is specified, the first scanned device with a matching BLE device name will be used.
     //
-    InterestingDevice(const char* name, const char* bleName, const char* macAddr = NULL);
+    InterestingDevice(const char* name, const char* bleName, const char* macAddr, uint8_t addrType = 1);
 
     //
     // Notify of an event
@@ -171,8 +170,9 @@ private:
 
     std::function<void(uint8_t)> mEventCb;
 
-    
+    bool doConnect(bool refresh);
     virtual bool doInitDevice() = 0;
+    void doDisconnect();
 
     //
     // These are default implementations for NimBLE callbacks
@@ -184,6 +184,7 @@ private:
     virtual void onDisconnect(NimBLEClient* pClient, int reason)  override
         {
             notifyEvent(DISCONNECTED);
+            InterestingDevice::doDisconnect();
         }
 
     bool onConnParamsUpdateRequest(NimBLEClient* pClient, const ble_gap_upd_params* params)  override

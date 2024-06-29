@@ -154,6 +154,7 @@ protected:
     virtual void notifyEvent(uint8_t event);
     
     bool connect(bool refresh = true);
+    virtual void doDisconnect();
 
     
 private:
@@ -172,7 +173,6 @@ private:
 
     bool doConnect(bool refresh);
     virtual bool doInitDevice() = 0;
-    void doDisconnect();
 
     //
     // These are default implementations for NimBLE callbacks

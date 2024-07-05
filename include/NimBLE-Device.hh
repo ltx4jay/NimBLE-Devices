@@ -146,7 +146,7 @@ protected:
     //
     // Create an interesting device with the given unique name, BLE device name, and MAC address
     //
-    InterestingDevice(const char* name, const char* bleName, const char* macAddr, uint8_t addrType = 1);
+    InterestingDevice(const char* name, const char* bleName, const char* macAddr, uint8_t addrType = 0);
 
     //
     // Notify of an event

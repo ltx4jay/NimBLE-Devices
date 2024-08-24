@@ -137,6 +137,21 @@ InterestingDevice::notifyEvent(uint8_t event)
 }
 
 
+void
+InterestingDevice::subscribeBatteryLevel(std::function<void(uint8_t)> fct)
+{
+    mBatteryCb = fct;
+}
+
+
+void
+InterestingDevice::notifyBatteryLevel(uint8_t percent)
+{
+    ESP_LOGI(getName(), "Battery Level = %d%%", percent);
+    if (mBatteryCb) mBatteryCb(percent);
+}
+
+
 bool
 InterestingDevice::wasFound()
 {

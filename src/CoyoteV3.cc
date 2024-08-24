@@ -31,6 +31,15 @@ public:
         V3::Waveform                 wave;
         V3::Waveform::const_iterator iter;
         unsigned int                 nLeft;
+
+        Playing()
+        : mutex(xSemaphoreCreateRecursiveMutex())
+        , run(false)
+        , wave({})
+        , iter()
+        , nLeft(0)
+        {}
+
     } mPlaying;
 
     virtual void setFreqBalance(uint8_t bal1, uint8_t bal2) override;
@@ -53,7 +62,7 @@ NimBLE::COYOTE::Device::V3::V3(const char* uniqueName, const char* macAddr)
 
 
 bool
-NimBLE::COYOTE::Device::V3::initDevice()
+NimBLE::COYOTE::Device::V3::initCoyoteDevice()
 {
     auto pSvc = mClient->getService("00000000-1000-8000-0080-5f9b34fb180a");
     if (pSvc == NULL) {
@@ -244,7 +253,7 @@ NimBLE::COYOTE::V3::WaveVal::getInt() const
 
 NimBLE::COYOTE::V3Channel::V3Channel(Device *parent, const char* name)
     : Channel(parent, name)
-    , mPlaying{xSemaphoreCreateRecursiveMutex(), false}
+    , mPlaying()
 {
 }
 

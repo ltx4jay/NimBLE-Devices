@@ -33,6 +33,16 @@ public:
         V2::Waveform                 wave;
         V2::Waveform::const_iterator iter;
         unsigned int                 nLeft;
+
+        Playing()
+        : mutex(xSemaphoreCreateRecursiveMutex())
+        , start(false)
+        , run(false)
+        , wave({})
+        , iter()
+        , nLeft(0)
+        {}
+
     } mPlaying;
 
     virtual void setWaveform(const V2::Waveform& wave, uint8_t power = 0) override;
@@ -52,15 +62,18 @@ NimBLE::COYOTE::Device::V2::V2(const char* uniqueName, const char* macAddr)
 
 
 bool
-NimBLE::COYOTE::Device::V2::initDevice()
+NimBLE::COYOTE::Device::V2::initCoyoteDevice()
 {
+    mClient->getServices();
+    
     auto pSvc = mClient->getService("955A180A-0FE2-F5AA-A094-84B8D4F3E8AD");
     if (pSvc == NULL) {
         ESP_LOGE(getName(), "Cannot find battery service.\n");
         notifyEvent(ERROR);
         return false;
     }
-
+    pSvc->getCharacteristics();
+    
     auto firmware = pSvc->getCharacteristic("955A1501-0FE2-F5AA-A094-84B8D4F3E8AD");
     uint16_t fw = * ((uint16_t*) firmware->readValue().data());
     ESP_LOGI(getName(), "Firmware %02x.%02x", fw & 0x00FF, fw >> 8);
@@ -68,6 +81,7 @@ NimBLE::COYOTE::Device::V2::initDevice()
     auto battery  = pSvc->getCharacteristic("955A1500-0FE2-F5AA-A094-84B8D4F3E8AD");
     if (battery != nullptr) battery->subscribe(true, std::bind(&Device::notifyBattery, this,
                                                                std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    notifyBatteryLevel(battery->readValue<uint8_t>());
     
     pSvc = mClient->getService("955A180B-0FE2-F5AA-A094-84B8D4F3E8AD");
     if (pSvc == NULL) {
@@ -75,6 +89,7 @@ NimBLE::COYOTE::Device::V2::initDevice()
         notifyEvent(ERROR);
         return false;
     }
+    pSvc->getCharacteristics();
   
     auto cfgChar      = pSvc->getCharacteristic("955A1507-0FE2-F5AA-A094-84B8D4F3E8AD");
     mPower.charac   = pSvc->getCharacteristic("955A1504-0FE2-F5AA-A094-84B8D4F3E8AD");
@@ -140,7 +155,6 @@ NimBLE::COYOTE::Device::V2::run()
 {
     auto xLastWakeTime = xTaskGetTickCount();
 
-    unsigned int nextPowerUpdate = 0;
     while (1) {
         uint8_t powA;
         uint8_t powB;
@@ -227,7 +241,7 @@ NimBLE::COYOTE::V2::WaveVal::operator uint8_t*() const
 NimBLE::COYOTE::V2Channel::V2Channel(Device *parent, const char* name, NimBLERemoteCharacteristic *charac)
     : Channel(parent, name)
     , mChar(charac)
-    , mPlaying{xSemaphoreCreateRecursiveMutex(), false, false}
+    , mPlaying()
 {
 }
 

@@ -29,7 +29,7 @@ public:
     // A button device with the specified unique name, BLE device name, and optional MAC address
     // If no address is specified, the first one found will match
     //
-    Device(const char* uniqueName, const char* bleName, const char* macAddr);
+    Device(const char* uniqueName, const char* bleName, const char* macAddr, uint8_t addrType = 0);
 
     virtual ~Device();
 

@@ -88,7 +88,7 @@ namespace V3 {
 //
 // One V3.0 waveform segment
 //
-struct WaveVal {
+class WaveVal {
 public:
     //
     // Construct a waveform segment with the specified frequency (10..240) and intensity (0..100),
@@ -225,6 +225,8 @@ public:
 
     virtual ~Device();
 
+    virtual bool initCoyoteDevice() = 0;
+
     //
     // Set the absolute maximum power levels that can be set on each channel.
     // Default is 100
@@ -236,11 +238,6 @@ public:
     //
     Channel& getChannelA();
     Channel& getChannelB();
-
-    //
-    // Subscribe to battery update. Argument is battery level in % (optional)
-    //
-    void subscribeBattery(std::function<void(uint8_t)> fct);
 
     //
     // Service the Coyote
@@ -260,13 +257,11 @@ private:
     Channel *mChannel[2];
 
     virtual bool doInitDevice()  override final;
-    virtual bool initDevice() = 0;
 
     TaskHandle_t mTaskHandle;
     static void  runTask(void* pvParameter);
     virtual void run() = 0;
 
-    std::function<void(uint8_t)> mBatteryCb;
     void notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
 
     friend class Channel;
@@ -292,7 +287,7 @@ private:
         NimBLERemoteCharacteristic* charac;
     } mPower;
 
-    virtual bool initDevice()  override;
+    virtual bool initCoyoteDevice()  override;
     virtual void run() override;
     void notifyPower(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
 };
@@ -316,7 +311,7 @@ private:
 
     void notifyResp(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
 
-    virtual bool initDevice()  override;
+    virtual bool initCoyoteDevice()  override;
     virtual void run() override;
 
     friend class V3Channel;

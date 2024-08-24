@@ -1,8 +1,8 @@
 #include "NimBLE-Device/Keyboard.hh"
 
 
-NimBLE::Keyboard::Device::Device(const char* uniqueName, const char* bleName, const char* macAddr)
-    : NimBLE::InterestingDevice(uniqueName, bleName, macAddr)
+NimBLE::Keyboard::Device::Device(const char* uniqueName, const char* bleName, const char* macAddr, uint8_t addrType)
+    : NimBLE::InterestingDevice(uniqueName, bleName, macAddr, addrType)
     , mListeners()
 {
     for (uint16_t i = 0; i < 256; i++) mKeyMap[i] = i;

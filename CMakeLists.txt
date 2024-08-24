@@ -14,4 +14,5 @@ idf_component_register(
     "src/CoyoteV3.cc"
     "src/Switch.cc"
     "src/Keyboard.cc"
+    "src/iTag.cc"
 )

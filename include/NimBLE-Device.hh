@@ -112,6 +112,11 @@ public:
     bool isConnected();
 
     //
+    // Subscribe to the battery level notifications (optional)
+    //
+    void subscribeBatteryLevel(std::function<void(uint8_t percent)> fct);
+
+    //
     // Service all found devices unless they have explicitly opted out of this global service call.
     // To be called as often as possible if all found devices to be serviced using a single thread
     //
@@ -152,6 +157,11 @@ protected:
     // Notify of an event
     //
     virtual void notifyEvent(uint8_t event);
+
+    //
+    // Notify a battery level
+    //
+    virtual void notifyBatteryLevel(uint8_t percent);
     
     bool connect(bool refresh = true);
     virtual void doDisconnect();
@@ -170,6 +180,7 @@ private:
     bool                mService;
 
     std::function<void(uint8_t)> mEventCb;
+    std::function<void(uint8_t)> mBatteryCb;
 
     bool doConnect(bool refresh);
     virtual bool doInitDevice() = 0;

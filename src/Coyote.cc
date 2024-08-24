@@ -134,7 +134,7 @@ bool
 NimBLE::COYOTE::Device::doInitDevice()
 {
     mClient->discoverAttributes();
-    if (!initDevice()) return false;
+    if (!initCoyoteDevice()) return false;
 
     ESP_LOGI(getName(), "Connected!");
     xTaskCreate(&runTask, getName(), 8192, this, 5, &mTaskHandle);
@@ -158,18 +158,11 @@ NimBLE::COYOTE::Device::getChannelB()
 
 
 void
-NimBLE::COYOTE::Device::subscribeBattery(std::function<void(uint8_t)> fct)
-{
-    mBatteryCb = fct;
-}
-
-void
 NimBLE::COYOTE::Device::notifyBattery(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify)
 {
     uint8_t battery = pData[0];
-    ESP_LOGI(getName(), "Battery Level = %d%%", battery);
 
-    if (mBatteryCb) mBatteryCb(battery);
+    notifyBatteryLevel(battery);
 }
 
 

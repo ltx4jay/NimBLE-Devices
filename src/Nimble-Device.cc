@@ -8,6 +8,7 @@
 //
 
 #include "NimBLE-Device.hh"
+#include <sys/_intsup.h>
 
 using namespace NimBLE;
 
@@ -311,3 +312,34 @@ InterestingDevice::doDisconnect()
     mInit      = false;
 }
 
+
+static char
+itoh(uint8_t i)
+{
+    i &= 0x0f;
+    if (i < 10) return '0' + i;
+    return 'a' + i - 10;
+}
+
+
+const char*
+InterestingDevice::image(const uint8_t *msg, unsigned int len)
+{
+    static char buf[1024];
+
+    auto maxLen = sizeof(buf) / 2 - 1;
+    if (len >= maxLen) len = maxLen;
+
+    auto p = buf;
+    auto d = msg;
+
+    while (len) {
+        *p++ = itoh(*d >> 4);
+        *p++ = itoh(*d++);
+        len--;
+    }
+
+    *p = '\0';
+
+    return buf;
+}

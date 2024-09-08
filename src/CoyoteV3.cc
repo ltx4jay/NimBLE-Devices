@@ -64,7 +64,7 @@ NimBLE::COYOTE::Device::V3::V3(const char* uniqueName, const char* macAddr)
 bool
 NimBLE::COYOTE::Device::V3::initCoyoteDevice()
 {
-    auto pSvc = mClient->getService("00000000-1000-8000-0080-5f9b34fb180a");
+    auto pSvc = mClient->getService("180A");
     if (pSvc == NULL) {
         ESP_LOGE(getName(), "Cannot find battery service.\n");
         notifyEvent(ERROR);
@@ -75,20 +75,20 @@ NimBLE::COYOTE::Device::V3::initCoyoteDevice()
     // uint16_t fw = * ((uint16_t*) firmware->readValue().data());
     // ESP_LOGI(getName(), "Firmware %02x.%02x", fw & 0x00FF, fw >> 8);
 
-    auto battery  = pSvc->getCharacteristic("00000000-1000-8000-0080-5f9b34fb1500");
+    auto battery  = pSvc->getCharacteristic("00001500-0000-1000-8000-00805f9b34fb");
     if (battery != nullptr) battery->subscribe(true, std::bind(&Device::notifyBattery, this,
                                                                std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
     
-    pSvc = mClient->getService("00000000-1000-8000-0080-5f9b34fb180c");
+    pSvc = mClient->getService("0000180C-0000-1000-8000-00805f9b34fb");
     if (pSvc == NULL) {
         ESP_LOGE(getName(), "Cannot find power service.\n");
         notifyEvent(ERROR);
         return false;
     }
   
-    mCharac = pSvc->getCharacteristic("00000000-1000-8000-0080-5f9b34fb150a");
+    mCharac = pSvc->getCharacteristic("0000150A-0000-1000-8000-00805f9b34fb");
 
-    auto resp  = pSvc->getCharacteristic("00000000-1000-8000-0080-5f9b34fb150b");
+    auto resp  = pSvc->getCharacteristic("0000150B-0000-1000-8000-00805f9b34fb");
     if (resp != nullptr) resp->subscribe(true, std::bind(&Device::V3::notifyResp, this,
                                                          std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
@@ -115,6 +115,14 @@ NimBLE::COYOTE::Device::V3::run()
 
     uint8_t msg[20];
 
+    // Set power to 0
+    bzero(msg, sizeof(msg));
+    msg[0] = 0xB0;
+    msg[1] = 0xFF;
+    mPendingSerial = 0x0F;
+    // ESP_LOGI("SEND", "%s", image(msg, sizeof(msg)));
+    mCharac->writeValue(msg, sizeof(msg), false);
+
     // Set max power (200) and balance parameters (32, 32)
     mChannel[0]->setFreqBalance(32, 32);
     mChannel[1]->setFreqBalance(32, 32);
@@ -134,6 +142,7 @@ NimBLE::COYOTE::Device::V3::run()
 
         // DG Labs recommends only one pending power change request
         if (!mPendingSerial) {
+            
             // Always use absolute values
             if (newPowerA) {
                 msg[1] |= mNextSerial | 0x0C;
@@ -143,14 +152,19 @@ NimBLE::COYOTE::Device::V3::run()
                 msg[1] |= mNextSerial | 0x03;
                 msg[3] = powB;
             }
-            mPendingSerial = msg[1] >> 4;
-            if (mPendingSerial) {
-                mNextSerial += 0x10;
-                if (mNextSerial == 0x00) mNextSerial = 0x10;
+
+            if (msg[1]) {
+                mPendingSerial = mNextSerial >> 4;
+
+                if (mNextSerial == 0xF0) mNextSerial = 0x10;
+                else mNextSerial += 0x10;
 
                 ESP_LOGI(getName(), "Set power to A:%d->%d  B:%d->%d",
                          (uint16_t)getChannelA().getPower(), powA,
                          (uint16_t)getChannelB().getPower(), powB);
+
+                getChannelA().mSentPower = powA;
+                getChannelB().mSentPower = powB;
             }
         }
 
@@ -162,6 +176,7 @@ NimBLE::COYOTE::Device::V3::run()
             }
         }
 
+        // ESP_LOGI("SEND", "%s", image(msg, sizeof(msg)));
         mCharac->writeValue(msg, sizeof(msg), false);
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(100));
     }
@@ -170,9 +185,13 @@ NimBLE::COYOTE::Device::V3::run()
 void
 NimBLE::COYOTE::Device::V3::notifyResp(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify)
 {
+    // ESP_LOGI("RECV", "%s", image(pData, length));
+
     if (pData[0] == 0xB1) {
         if (pData[1] != mPendingSerial) {
             ESP_LOGE(getName(), "Unexpected response serial number 0x%02x instead of 0x%02x.", pData[1], mPendingSerial);
+            // Clear it so we can continue to update power
+            mPendingSerial = 0x00;
             return;
         }
         mChannel[0]->mPower = pData[2];
@@ -274,6 +293,7 @@ NimBLE::COYOTE::V3Channel::setFreqBalance(uint8_t bal1, uint8_t bal2)
         pDev->mFreqBal[6] = bal2;
     }
 
+    // ESP_LOGI("SEND", "%s", pDev->image(pDev->mFreqBal, sizeof(pDev->mFreqBal)));
     pDev->mCharac->writeValue(pDev->mFreqBal, sizeof(pDev->mFreqBal), false);
 }
 

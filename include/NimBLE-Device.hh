@@ -166,6 +166,11 @@ protected:
     bool connect(bool refresh = true);
     virtual void doDisconnect();
 
+    //
+    // For debugging: create an image of a byte string
+    //
+    const char* image(const uint8_t *msg, unsigned int len);
+
     
 private:
     static std::vector<InterestingDevice*> sAllDevices;

@@ -225,6 +225,8 @@ public:
 
     virtual ~Device();
 
+    virtual float getVersion() = 0;
+
     virtual bool initCoyoteDevice() = 0;
 
     //
@@ -287,6 +289,11 @@ private:
         NimBLERemoteCharacteristic* charac;
     } mPower;
 
+    virtual float getVersion()  override
+    {
+        return 2.0;
+    }
+
     virtual bool initCoyoteDevice()  override;
     virtual void run() override;
     void notifyPower(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
@@ -296,7 +303,7 @@ private:
 class Device::V3 : public Device {
 public:
     //
-    // A Coyote V2.0 device with the specified unique name and optional MAC address
+    // A Coyote V3.0 device with the specified unique name and optional MAC address
     // If no address is specified, the first one found will match
     //
     V3(const char* uniqueName, const char* macAddr = NULL);
@@ -310,6 +317,11 @@ private:
     uint8_t                     mFreqBal[7];
 
     void notifyResp(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify);
+
+    virtual float getVersion() override
+    {
+        return 3.0;
+    }
 
     virtual bool initCoyoteDevice()  override;
     virtual void run() override;

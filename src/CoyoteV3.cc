@@ -174,6 +174,7 @@ NimBLE::COYOTE::Device::V3::run()
                 ((NimBLE::COYOTE::V3Channel*) it)->getNextSegment(msg[k], msg[k+4]);
                 k++;
             }
+            k += 4;
         }
 
         // ESP_LOGI("SEND", "%s", image(msg, sizeof(msg)));

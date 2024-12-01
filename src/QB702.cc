@@ -2,7 +2,7 @@
 
 
 NimBLE::QB702::Device::Device(const char* uniqueName, const char* macAddr)
-    : NimBLE::Keyboard::Device(uniqueName, "QB702", macAddr)
+    : NimBLE::Keyboard::Device(uniqueName, "QB702", macAddr, 1)
 {
 }
 
@@ -45,7 +45,8 @@ NimBLE::QB702::Device::serviceLoop(long nowInMs)
 void
 NimBLE::QB702::Device::notifyButton(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify)
 {
-    // The counter value is in pData[7]
+    // The counter value is in pData[6..7] in big endian order
+    // ESP_LOGI("QB702", "-> %s", image(pData, length));    
 
     // Translate button press to a SPC
     NimBLE::Keyboard::Device::publish(' ', NimBLE::Keyboard::Device::PRESSED);

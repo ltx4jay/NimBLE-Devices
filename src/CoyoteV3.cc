@@ -159,7 +159,7 @@ NimBLE::COYOTE::Device::V3::run()
                 if (mNextSerial == 0xF0) mNextSerial = 0x10;
                 else mNextSerial += 0x10;
 
-                ESP_LOGI(getName(), "Set power to A:%d->%d  B:%d->%d",
+                ESP_LOGD(getName(), "Set power to A:%d->%d  B:%d->%d",
                          (uint16_t)getChannelA().getPower(), powA,
                          (uint16_t)getChannelB().getPower(), powB);
 
@@ -208,7 +208,7 @@ NimBLE::COYOTE::Device::V3::notifyResp(NimBLERemoteCharacteristic* pRemoteCharac
         return;
     }
 
-    ESP_LOGE(getName(), "Unexpected 0x%02x response received.", pData[0]);
+    ESP_LOGD(getName(), "Unexpected 0x%02x response received.", pData[0]);
 }
 
 NimBLE::COYOTE::V3::WaveVal::WaveVal(uint8_t freq, uint16_t intensity, uint16_t rpt)

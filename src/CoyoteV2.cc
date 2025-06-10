@@ -163,7 +163,7 @@ NimBLE::COYOTE::Device::V2::run()
 
         // Only update power if there was a change requested
         if (newPower) {
-            ESP_LOGI(getName(), "Set power to A:%d->%d->%d  B:%d->%d->%d",
+            ESP_LOGD(getName(), "Set power to A:%d->%d->%d  B:%d->%d->%d",
                         (uint16_t)getChannelA().getPower(), (uint16_t)getChannelA().mSentPower, powA,
                         (uint16_t)getChannelB().getPower(), (uint16_t)getChannelB().mSentPower, powB);
 

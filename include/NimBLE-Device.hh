@@ -154,6 +154,11 @@ protected:
     InterestingDevice(const char* name, const char* bleName, const char* macAddr, uint8_t addrType = 0);
 
     //
+    // Change the MAC address
+    //
+    void changeAddress(const char* macAddr);
+
+    //
     // Notify of an event
     //
     virtual void notifyEvent(uint8_t event);
@@ -177,7 +182,7 @@ private:
     
     std::string         mUniqueName;
     std::string         mDeviceName;
-    const NimBLEAddress mAddress;
+    NimBLEAddress       mAddress;
     bool                mMustFind;
     bool                mFound;
     bool                mConnected;
@@ -187,7 +192,7 @@ private:
     std::function<void(uint8_t)> mEventCb;
     std::function<void(uint8_t)> mBatteryCb;
 
-    bool doConnect(bool refresh);
+    bool doConnect(bool refresh, int attempt = 1);
     virtual bool doInitDevice() = 0;
 
     //

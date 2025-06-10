@@ -39,6 +39,11 @@ InterestingDevice::~InterestingDevice()
     if (mClient != NULL && mClient->isConnected()) mClient->disconnect();
 }
 
+void InterestingDevice::changeAddress(const char* macAddr)
+{
+    mAddress = NimBLEAddress(macAddr, mAddress.getType());
+}
+
 bool
 InterestingDevice::addToDevicePool(InterestingDevice* dev, bool mustFind)
 {
@@ -148,7 +153,7 @@ InterestingDevice::subscribeBatteryLevel(std::function<void(uint8_t)> fct)
 void
 InterestingDevice::notifyBatteryLevel(uint8_t percent)
 {
-    ESP_LOGI(getName(), "Battery Level = %d%%", percent);
+    ESP_LOGD(getName(), "Battery Level = %d%%", percent);
     if (mBatteryCb) mBatteryCb(percent);
 }
 
@@ -210,10 +215,11 @@ InterestingDevice::isConnected()
 
 
 bool
-InterestingDevice::doConnect(bool refresh)
+InterestingDevice::doConnect(bool refresh, int attempt)
 {
+    ESP_LOGI(mUniqueName.c_str(), "Connecting to %s...", mClient->getPeerAddress().toString().c_str());
     if (!mClient->connect(refresh)) {
-        ESP_LOGI(mUniqueName.c_str(), "connect() failed!");
+        ESP_LOGI(mUniqueName.c_str(), "connect(%d) failed!", attempt);
         return false;
     }
 
@@ -237,7 +243,7 @@ InterestingDevice::connect(bool refresh)
          */
         mClient = NimBLEDevice::getClientByPeerAddress(mAddress);
         if (mClient) {
-            if (doConnect(false)) {
+            if (doConnect(false, 1)) {
                 notifyEvent(CONNECTED);
                 mConnected = true;
                 return true;
@@ -257,10 +263,11 @@ InterestingDevice::connect(bool refresh)
     /** Set how long we are willing to wait for the connection to complete (milliseconds), default is 30. */
     mClient->setConnectTimeout(3000);
         
-    if (!doConnect(refresh)) {
+    if (!doConnect(refresh, 2)) {
         /** Created a client but failed to connect, don't need to keep it as it has no data */
         // This hangs...
-        // NimBLEDevice::deleteClient(mClient);
+        NimBLEDevice::deleteClient(mClient);
+        mClient = nullptr;
         ESP_LOGI(mUniqueName.c_str(), "connect() failed!");
         notifyEvent(ERROR);
         return false;

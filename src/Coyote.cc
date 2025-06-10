@@ -61,6 +61,7 @@ NimBLE::COYOTE::Channel::setPower(uint8_t val, bool unsafe)
         }
     }
     
+    ESP_LOGI(getName().c_str(), "power set to %d", val);
     mSetPower = val;
 }
 

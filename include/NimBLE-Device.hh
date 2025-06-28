@@ -10,6 +10,7 @@
 #pragma once
 
 #include "NimBLEDevice.h"
+#include "freertos/FreeRTOS.h"
 
 #include <functional>
 #include <cstdint>

@@ -51,8 +51,9 @@ void
 NimBLE::AB_Shutter3::Device::notifyButton(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify)
 {
     // 00 00 -> off
+    // 01 00 -> ON
     // 02 00 -> ON
 
     // Translate button press to a SPC
-    NimBLE::Keyboard::Device::publish(' ', (pData[0] == 0x02) ? NimBLE::Keyboard::Device::PRESSED : NimBLE::Keyboard::Device::RELEASED);
+    NimBLE::Keyboard::Device::publish(' ', (pData[0] > 0x00) ? NimBLE::Keyboard::Device::PRESSED : NimBLE::Keyboard::Device::RELEASED);
 }
